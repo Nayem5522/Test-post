@@ -44,6 +44,23 @@ def run_flask():
 
 threading.Thread(target=run_flask).start()
 
+AUTH_CHANNEL = -1002323796637
+
+async def is_subscribed(bot, user_id, channels):
+    for channel in channels:
+        try:
+            chat_member = await bot.get_chat_member(channel, user_id)
+            if chat_member.status in ["kicked", "banned"]:
+                return False  # ✅ ব্যান থাকলে False রিটার্ন করবে
+        except UserNotParticipant:
+            return False  # ✅ ইউজার যদি না থাকে তাহলে False রিটার্ন করবে
+        except ChatAdminRequired:
+            continue  # ✅ যদি বট অ্যাডমিন না হয়, তাহলে স্কিপ করবে
+        except Exception as e:
+            print(f"Error in checking subscription: {e}")  # ✅ লগ রাখা হবে
+            continue
+    return True  # ✅ যদি সবগুলো চ্যানেলে জয়েন থাকে তাহলে True রিটার্ন করবে
+
 # 🟢 হেল্পার ফাংশন
 async def is_admin(bot: Client, user_id: int, chat_id: int):
     try:
@@ -94,6 +111,39 @@ async def save_channel(user_id: int, channel_id: int, channel_title: str):
 # 🟢 /start
 @app.on_message(filters.private & filters.command("start"))
 async def start_handler(bot, msg: Message):
+    # Ensure AUTH_CHANNEL is a list
+    if isinstance(AUTH_CHANNEL, str):
+        AUTH_CHANNELS = [AUTH_CHANNEL]
+    else:
+        AUTH_CHANNELS = AUTH_CHANNEL
+
+    # Check subscription
+    subscribed = await is_subscribed(client, user_id, AUTH_CHANNELS)
+
+    if not subscribed:
+        btn = []
+        for channel in AUTH_CHANNELS:
+            try:
+                chat = await client.get_chat(channel)
+                invite_link = chat.invite_link or await client.export_chat_invite_link(channel)
+                btn.append([InlineKeyboardButton(f"✇ Join {chat.title} ✇", url=invite_link)])
+            except Exception as e:
+                print(f"Error: {e}")
+
+        btn.append([InlineKeyboardButton("🔄 Refresh", callback_data="refresh_check")])
+
+        # Force subscription message
+        await message.reply_photo(
+            photo="https://i.postimg.cc/xdkd1h4m/IMG-20250715-153124-952.jpg",
+            caption=(
+                f"👋 Hello {message.from_user.mention},\n\n"
+                "If you want to use me, you must first join our updates channel. "
+                "Click on \"✇ Join Our Updates Channel ✇\" button. Then click on the \"Request to Join\" button. "
+                "After joining, click on \"Refresh\" button."
+            ),
+            reply_markup=InlineKeyboardMarkup(btn)
+        )
+        return  
     await msg.reply_text(
         "👋 Welcome!\n\n"
         "➕ Use /addchannel <id> → Add a channel\n"
@@ -235,6 +285,21 @@ async def media_handler(bot, msg: Message):
     await users.update_one({"user_id": msg.from_user.id}, {"$set": {"last_media": msg.id}})
     buttons = [[InlineKeyboardButton(ch["title"], callback_data=f"sendto_{msg.id}_{ch['id']}")] for ch in user["channels"]]
     await msg.reply_text("📤 Select a channel to post:", reply_markup=InlineKeyboardMarkup(buttons))
+
+@app.on_callback_query(filters.regex("refresh_check"))  
+async def refresh_callback(client: Client, query: CallbackQuery):  
+    user_id = query.from_user.id  
+    subscribed = await is_subscribed(client, user_id, AUTH_CHANNEL)  
+
+    if subscribed:
+        # ✅ যদি ইউজার চ্যানেলে জয়েন থাকে, তাহলে পুরাতন মেসেজ ডিলিট করে নতুন মেসেজ দেবে
+        await query.message.delete()  
+        await query.message.reply_text(
+            "✅ Thank You For Joining! Now You Can Use Me."
+        )
+    else:
+        # ❌ যদি ইউজার জয়েন না করে থাকে, তাহলে পপ-আপ দেখাবে
+        await query.answer("❌ You have not joined yet. Please join first, then refresh.", show_alert=True)
 
 # 🟢 Callback Handler (Channel Delete, Button Delete, Media Post, Reactions)
 @app.on_callback_query()
