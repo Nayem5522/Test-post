@@ -70,59 +70,7 @@ async def save_channel(user_id: int, channel_id: int, channel_title: str):
     await users_collection.update_one({"user_id": user_id}, {"$set": {"channels": user["channels"]}})
     return True
 
-# ❗ নতুন যোগ করা হয়েছে: ফোর্স সাবস্ক্রিপশন চেক ফাংশন
-async def check_fsub(bot: Client, user_id: int):
-    if not FSUB_CHANNELS:
-        return True, None
 
-    not_joined_channels = []
-    keyboard = []
-
-    for channel_id in FSUB_CHANNELS:
-        try:
-            chat_member = await bot.get_chat_member(channel_id, user_id)
-            if chat_member.status in [
-                enums.ChatMemberStatus.BANNED,
-                enums.ChatMemberStatus.LEFT,
-                enums.ChatMemberStatus.RESTRICTED
-            ]:
-                not_joined_channels.append(channel_id)
-        except Exception as e:
-            # User might not have started bot or channel is private and no request sent yet
-            logger.warning(f"Error checking FSub for user {user_id} in channel {channel_id}: {e}")
-            not_joined_channels.append(channel_id)
-
-    if not not_joined_channels:
-        return True, None  # All channels joined
-
-    # Construct force subscribe buttons for not joined channels
-    for channel_id in not_joined_channels:
-        try:
-            chat = await bot.get_chat(channel_id)
-
-            if chat.type in [enums.ChatType.PRIVATE, enums.ChatType.CHANNEL] and not chat.username:
-                # Private channel or no username → create invite link
-                invite_link = await bot.create_chat_invite_link(chat_id=channel_id, member_limit=1)
-                keyboard.append([InlineKeyboardButton(f"➕ {chat.title}", url=invite_link.invite_link)])
-            else:
-                # Public channel with username
-                if chat.username:
-                    url = f"https://t.me/{chat.username}"
-                else:
-                    # Fallback: create invite link if username missing
-                    invite_link = await bot.create_chat_invite_link(chat_id=channel_id, member_limit=1)
-                    url = invite_link.invite_link
-                keyboard.append([InlineKeyboardButton(f"➕ {chat.title}", url=url)])
-
-        except Exception as e:
-            logger.error(f"Error getting chat info or creating invite link for {channel_id}: {e}")
-            # Fallback for unknown error
-            keyboard.append([InlineKeyboardButton(f"➕ Channel {channel_id}", url=f"https://t.me/{channel_id}")])
-
-    # Add refresh button
-    keyboard.append([InlineKeyboardButton("🔄 Refresh", callback_data="fsub_refresh")])
-
-    return False, InlineKeyboardMarkup(keyboard)
 
 # 🟢 /start
 @app.on_message(filters.private & filters.command("start"))
@@ -186,15 +134,6 @@ async def broadcast_handler(bot, msg: Message):
 # 🟢 Channel & Button Commands
 @app.on_message(filters.private & filters.command("addchannel"))
 async def add_channel_cmd(bot, msg: Message):
-    # ❗ ফোর্স সাবস্ক্রিপশন চেক যোগ করা হয়েছে
-    is_joined, keyboard = await check_fsub(bot, msg.from_user.id)
-    if not is_joined:
-        await msg.reply_text(
-            "⚠️ You must join our channels to use this bot.",
-            reply_markup=keyboard
-        )
-        return
-
     if len(msg.command) < 2:
         return await msg.reply_text("⚠️ Please give a channel ID.\nExample: `/addchannel -1001234567891`")
     channel_id = int(msg.command[1])
@@ -212,15 +151,7 @@ async def add_channel_cmd(bot, msg: Message):
 
 @app.on_message(filters.private & filters.forwarded)
 async def forward_handler(bot, msg: Message):
-    # ❗ ফোর্স সাবস্ক্রিপশন চেক যোগ করা হয়েছে
-    is_joined, keyboard = await check_fsub(bot, msg.from_user.id)
-    if not is_joined:
-        await msg.reply_text(
-            "⚠️ You must join our channels to use this bot.",
-            reply_markup=keyboard
-        )
-        return
-
+    
     if not msg.forward_from_chat:
         return await msg.reply_text("⚠️ This is not a valid channel post!")
     channel = msg.forward_from_chat
@@ -237,15 +168,7 @@ async def forward_handler(bot, msg: Message):
 
 @app.on_message(filters.private & filters.command("mychannels"))
 async def my_channels(bot, msg: Message):
-    # ❗ ফোর্স সাবস্ক্রিপশন চেক যোগ করা হয়েছে
-    is_joined, keyboard = await check_fsub(bot, msg.from_user.id)
-    if not is_joined:
-        await msg.reply_text(
-            "⚠️ You must join our channels to use this bot.",
-            reply_markup=keyboard
-        )
-        return
-
+    
     user = await users_collection.find_one({"user_id": msg.from_user.id})
     if not user or not user.get("channels"):
         return await msg.reply_text("📂 You don’t have any channels saved yet.")
@@ -254,15 +177,7 @@ async def my_channels(bot, msg: Message):
 
 @app.on_message(filters.private & filters.command("delchannel"))
 async def del_channel(bot, msg: Message):
-    # ❗ ফোর্স সাবস্ক্রিপশন চেক যোগ করা হয়েছে
-    is_joined, keyboard = await check_fsub(bot, msg.from_user.id)
-    if not is_joined:
-        await msg.reply_text(
-            "⚠️ You must join our channels to use this bot.",
-            reply_markup=keyboard
-        )
-        return
-
+    
     user = await users_collection.find_one({"user_id": msg.from_user.id})
     if not user or not user.get("channels"):
         return await msg.reply_text("📂 You don’t have any channels saved yet.")
@@ -272,15 +187,7 @@ async def del_channel(bot, msg: Message):
 # 🟢 Custom Button Commands
 @app.on_message(filters.private & filters.command("addbutton"))
 async def add_button(bot, msg: Message):
-    # ❗ ফোর্স সাবস্ক্রিপশন চেক যোগ করা হয়েছে
-    is_joined, keyboard = await check_fsub(bot, msg.from_user.id)
-    if not is_joined:
-        await msg.reply_text(
-            "⚠️ You must join our channels to use this bot.",
-            reply_markup=keyboard
-        )
-        return
-
+    
     if not msg.text or len(msg.text.split()) < 3:
         return await msg.reply_text(
             "⚠️ Usage: `/addbutton text url`\n\n"
@@ -305,14 +212,7 @@ async def add_button(bot, msg: Message):
     
 @app.on_message(filters.private & filters.command("mybuttons"))
 async def my_buttons(bot, msg: Message):
-    # ❗ ফোর্স সাবস্ক্রিপশন চেক যোগ করা হয়েছে
-    is_joined, keyboard = await check_fsub(bot, msg.from_user.id)
-    if not is_joined:
-        await msg.reply_text(
-            "⚠️ You must join our channels to use this bot.",
-            reply_markup=keyboard
-        )
-        return
+    
 
     user = await users_collection.find_one({"user_id": msg.from_user.id})
     if not user or not user.get("custom_buttons"):
@@ -322,14 +222,7 @@ async def my_buttons(bot, msg: Message):
 
 @app.on_message(filters.private & filters.command("delbutton"))
 async def del_button(bot, msg: Message):
-    # ❗ ফোর্স সাবস্ক্রিপশন চেক যোগ করা হয়েছে
-    is_joined, keyboard = await check_fsub(bot, msg.from_user.id)
-    if not is_joined:
-        await msg.reply_text(
-            "⚠️ You must join our channels to use this bot.",
-            reply_markup=keyboard
-        )
-        return
+    
 
     user = await users_collection.find_one({"user_id": msg.from_user.id})
     if not user or not user.get("custom_buttons"):
@@ -339,14 +232,7 @@ async def del_button(bot, msg: Message):
 
 @app.on_message(filters.private & filters.command("clearbuttons"))
 async def clear_buttons(bot, msg: Message):
-    # ❗ ফোর্স সাবস্ক্রিপশন চেক যোগ করা হয়েছে
-    is_joined, keyboard = await check_fsub(bot, msg.from_user.id)
-    if not is_joined:
-        await msg.reply_text(
-            "⚠️ You must join our channels to use this bot.",
-            reply_markup=keyboard
-        )
-        return
+    
 
     await users_collection.update_one({"user_id": msg.from_user.id}, {"$set": {"custom_buttons": []}})
     await msg.reply_text("🗑 All custom buttons cleared!")
@@ -354,14 +240,6 @@ async def clear_buttons(bot, msg: Message):
 # 🟢 Caption Commands
 @app.on_message(filters.private & filters.command("setcap"))
 async def set_cap(bot, msg: Message):
-    # ❗ ফোর্স সাবস্ক্রিপশন চেক যোগ করা হয়েছে
-    is_joined, keyboard = await check_fsub(bot, msg.from_user.id)
-    if not is_joined:
-        await msg.reply_text(
-            "⚠️ You must join our channels to use this bot.",
-            reply_markup=keyboard
-        )
-        return
 
     if len(msg.command) < 2:
         return await msg.reply_text("⚠️ Usage: `/setcap your caption Here`")
@@ -387,14 +265,6 @@ async def see_cap(bot, msg: Message):
 
 @app.on_message(filters.private & filters.command("delcap"))
 async def del_cap(bot, msg: Message):
-    # ❗ ফোর্স সাবস্ক্রিপশন চেক যোগ করা হয়েছে
-    is_joined, keyboard = await check_fsub(bot, msg.from_user.id)
-    if not is_joined:
-        await msg.reply_text(
-            "⚠️ You must join our channels to use this bot.",
-            reply_markup=keyboard
-        )
-        return
 
     await users_collection.update_one({"user_id": msg.from_user.id}, {"$set": {"custom_caption": None}})
     await msg.reply_text("🗑 Custom caption deleted!")
@@ -402,14 +272,6 @@ async def del_cap(bot, msg: Message):
 # 🟢 Media Handler
 @app.on_message(filters.private & (filters.photo | filters.video))
 async def media_handler(bot, msg: Message):
-    # ❗ ফোর্স সাবস্ক্রিপশন চেক যোগ করা হয়েছে
-    is_joined, keyboard = await check_fsub(bot, msg.from_user.id)
-    if not is_joined:
-        await msg.reply_text(
-            "⚠️ You must join our channels to use this bot.",
-            reply_markup=keyboard
-        )
-        return
 
     user = await users_collection.find_one({"user_id": msg.from_user.id})
     if not user or not user.get("channels"):
@@ -421,26 +283,7 @@ async def media_handler(bot, msg: Message):
 # 🟢 Callback Handler (Channel Delete, Button Delete, Media Post, Reactions, Force Sub Refresh)
 @app.on_callback_query()
 async def callback_handler(bot, cq: CallbackQuery):
-    data = cq.data
-
-    # ❗ নতুন যোগ করা হয়েছে: ফোর্স সাবস্ক্রিপশন রিফ্রেশ
-    if data == "fsub_refresh":
-        is_joined, keyboard = await check_fsub(bot, cq.from_user.id)
-        if is_joined:
-            await cq.message.edit_text("✅ Thank you for joining! Now you can use this bot.", reply_markup=None)
-            # Optionally, send the /start message again after successful join
-            await start_handler(bot, cq.message) # Calling start handler to show main menu
-        else:
-            await cq.answer("⚠️ আপনি এখনো আমাদের সবগুলো চ্যানেলে জয়েন করে নেই তাই দয়া করে জয়েন করে রিফ্রেশ করুন।", show_alert=True)
-        return
-
-    # ❗ অন্যান্য কমাণ্ড চালানোর আগে ফোর্স সাবস্ক্রিপশন চেক
-    is_joined, keyboard = await check_fsub(bot, cq.from_user.id)
-    if not is_joined:
-        # If user is not joined, inform them and don't process further commands
-        await cq.answer("⚠️ You must join our channels to use this bot. Please refresh after joining.", show_alert=True)
-        return
-
+    data = cq.data  
     # Channel Delete
     if data.startswith("delch_"):
         ch_id = int(data.split("_")[1])
