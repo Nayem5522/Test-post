@@ -39,7 +39,7 @@ def index():
     return "Bot is running!", 200
 
 def run_flask():
-    port = int(os.environ.get("PORT", 8080))  # Render/Koyeb এ PORT সেট করে দেয়
+    port = int(os.environ.get("PORT", 8080))
     flask_app.run(host="0.0.0.0", port=port)
 
 # Flask আলাদা থ্রেডে চালানো হবে
@@ -52,7 +52,6 @@ async def is_admin(bot: Client, user_id: int, chat_id: int):
         return member.status in [enums.ChatMemberStatus.ADMINISTRATOR, enums.ChatMemberStatus.OWNER]
     except Exception:
         return False
-
 
 async def save_channel(user_id: int, channel_id: int, channel_title: str):
     user = await users.find_one({"user_id": user_id})
@@ -68,7 +67,6 @@ async def save_channel(user_id: int, channel_id: int, channel_title: str):
     await users.update_one({"user_id": user_id}, {"$set": {"channels": user["channels"]}})
     return True
 
-
 # 🟢 /start
 @app.on_message(filters.private & filters.command("start"))
 async def start_handler(bot, msg: Message):
@@ -79,7 +77,6 @@ async def start_handler(bot, msg: Message):
         "📂 Use /mychannels to check your saved channels."
     )
 
-
 # 🟢 /addchannel <id>
 @app.on_message(filters.private & filters.command("addchannel"))
 async def add_channel_cmd(bot, msg: Message):
@@ -87,19 +84,21 @@ async def add_channel_cmd(bot, msg: Message):
         return await msg.reply_text("⚠️ Please give a channel ID.\nExample: `/addchannel -1001234567890`")
 
     channel_id = int(msg.command[1])
-    me = await bot.get_me()
+    chat = await bot.get_chat(channel_id)
 
+    user = await users.find_one({"user_id": msg.from_user.id}) or {"channels": []}
+    already_saved = any(ch["id"] == channel_id for ch in user["channels"])
+
+    if already_saved:
+        await msg.reply_text("⚠️ This channel is already in your list.")
+        return
+
+    me = await bot.get_me()
     if not await is_admin(bot, me.id, channel_id):
         return await msg.reply_text("❌ Please give me admin rights in that channel first!")
 
-    chat = await bot.get_chat(channel_id)
-    added = await save_channel(msg.from_user.id, channel_id, chat.title)
-
-    if added:
-        await msg.reply_text(f"✅ Channel **{chat.title}** has been set successfully!")
-    else:
-        await msg.reply_text("⚠️ This channel is already in your list.")
-
+    await save_channel(msg.from_user.id, channel_id, chat.title)
+    await msg.reply_text(f"✅ Channel **{chat.title}** has been set successfully!")
 
 # 🟢 ফরওয়ার্ড পোস্ট থেকে অ্যাড
 @app.on_message(filters.private & filters.forwarded)
@@ -108,18 +107,17 @@ async def forward_handler(bot, msg: Message):
         return await msg.reply_text("⚠️ This is not a valid channel post!")
 
     channel = msg.forward_from_chat
-    me = await bot.get_me()
+    user = await users.find_one({"user_id": msg.from_user.id}) or {"channels": []}
+    already_saved = any(ch["id"] == channel.id for ch in user["channels"])
 
-    if not await is_admin(bot, me.id, channel.id):
-        return await msg.reply_text("❌ Please give me admin rights in that channel first!")
-
-    added = await save_channel(msg.from_user.id, channel.id, channel.title)
-
-    if added:
+    if not already_saved:
+        me = await bot.get_me()
+        if not await is_admin(bot, me.id, channel.id):
+            return await msg.reply_text("❌ Please give me admin rights in that channel first!")
+        await save_channel(msg.from_user.id, channel.id, channel.title)
         await msg.reply_text(f"✅ Channel **{channel.title}** has been set successfully!")
     else:
         await msg.reply_text("⚠️ This channel is already in your list.")
-
 
 # 🟢 /mychannels
 @app.on_message(filters.private & filters.command("mychannels"))
@@ -135,12 +133,11 @@ async def my_channels(bot, msg: Message):
 
     await msg.reply_text("📂 Your saved channels:", reply_markup=InlineKeyboardMarkup(buttons))
 
-
 # 🟢 মিডিয়া হ্যান্ডলার
 @app.on_message(filters.private & (filters.photo | filters.video))
 async def media_handler(bot, msg: Message):
     user = await users.find_one({"user_id": msg.from_user.id})
-    if not user or not user["channels"]:
+    if not user or not user.get("channels"):
         return await msg.reply_text("⚠️ You have no channels set. Use /addchannel first.")
 
     await users.update_one({"user_id": msg.from_user.id}, {"$set": {"last_media": msg.id}})
@@ -151,7 +148,6 @@ async def media_handler(bot, msg: Message):
     ]
 
     await msg.reply_text("📤 Select a channel to post:", reply_markup=InlineKeyboardMarkup(buttons))
-
 
 # 🟢 Callback হ্যান্ডলার
 @app.on_callback_query()
@@ -168,22 +164,16 @@ async def callback_handler(bot, cq: CallbackQuery):
             return await cq.answer("⚠️ Media not found!", show_alert=True)
 
         try:
-            media_msg = await bot.get_messages(cq.from_user.id, int(msg_id))
+            media_msg = await bot.get_messages(cq.from_user.id, msg_id)
 
-            # Fixed caption
             fixed_caption = (
                 "🔥 Quality: HDTS\n"
                 "📌 Indian User Use 1.1.1.1 VPN\n"
                 "👉 Visit Site"
             )
 
-            # Final caption
-            if media_msg.caption:
-                final_caption = f"{media_msg.caption}\n\n{fixed_caption}"
-            else:
-                final_caption = fixed_caption
+            final_caption = f"{media_msg.caption}\n\n{fixed_caption}" if media_msg.caption else fixed_caption
 
-            # Buttons
             buttons = InlineKeyboardMarkup(
                 [
                     [InlineKeyboardButton("👍", callback_data="like"),
@@ -203,7 +193,6 @@ async def callback_handler(bot, cq: CallbackQuery):
         except Exception as e:
             logger.error(e)
             await cq.answer("❌ Failed to post!", show_alert=True)
-
 
 # 🟢 রান
 app.run()
