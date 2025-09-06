@@ -57,9 +57,22 @@ async def ensure_admin(bot: Client, channel_id: int) -> bool:
     try:
         me = await bot.get_me()
         member = await bot.get_chat_member(channel_id, me.id)
-        if member.status != enums.ChatMemberStatus.ADMINISTRATOR:
-            return False
-        return True
+
+        # যদি OWNER হয় তাহলে সবসময় পারবে
+        if member.status == enums.ChatMemberStatus.OWNER:
+            return True
+
+        # যদি ADMIN হয় তাহলে privileges চেক করতে হবে
+        if member.status == enums.ChatMemberStatus.ADMINISTRATOR:
+            # Pyrogram v2 -> member.privileges
+            if hasattr(member, "privileges") and member.privileges:
+                return member.privileges.can_post_messages
+            # Pyrogram v1 fallback (কিছু version এ privileges থাকে না)
+            if hasattr(member, "can_post_messages"):
+                return member.can_post_messages
+
+        return False
+
     except Exception as e:
         logger.error(f"Admin check failed for {channel_id}: {e}")
         return False
