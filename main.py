@@ -88,7 +88,7 @@ async def start_handler(bot, msg: Message):
 @app.on_message(filters.private & filters.command("addchannel"))
 async def add_channel_cmd(bot, msg: Message):
     if len(msg.command) < 2:
-        return await msg.reply_text("⚠️ Please give a channel ID.\nExample: `/addchannel -1001234567890`")
+        return await msg.reply_text("⚠️ Please give a channel ID.\nExample: `/addchannel -1001234567891`")
     channel_id = int(msg.command[1])
     chat = await bot.get_chat(channel_id)
     user = await users.find_one({"user_id": msg.from_user.id}) or {"channels": []}
@@ -137,16 +137,28 @@ async def del_channel(bot, msg: Message):
 # 🟢 Custom Button Commands
 @app.on_message(filters.private & filters.command("addbutton"))
 async def add_button(bot, msg: Message):
-    if len(msg.command) < 3:
-        return await msg.reply_text("⚠️ Usage: `/addbutton <text> <url>`")
-    text = msg.command[1]
-    url = msg.command[2]
+    if not msg.text or len(msg.text.split()) < 3:
+        return await msg.reply_text(
+            "⚠️ Usage: `/addbutton <text> <url>`\n\n"
+            "💡 Example: `/addbutton ClickMe https://example.com`"
+        )
+
+    parts = msg.text.split(maxsplit=2)
+    text = parts[1]
+    url = parts[2]
+
     user = await users.find_one({"user_id": msg.from_user.id}) or {}
     buttons = user.get("custom_buttons", [])
     buttons.append({"text": text, "url": url})
-    await users.update_one({"user_id": msg.from_user.id}, {"$set": {"custom_buttons": buttons}}, upsert=True)
-    await msg.reply_text(f"✅ Button **{text}** added successfully!")
 
+    await users.update_one(
+        {"user_id": msg.from_user.id},
+        {"$set": {"custom_buttons": buttons}},
+        upsert=True
+    )
+
+    await msg.reply_text(f"✅ Button **{text}** added successfully!")
+    
 @app.on_message(filters.private & filters.command("mybuttons"))
 async def my_buttons(bot, msg: Message):
     user = await users.find_one({"user_id": msg.from_user.id})
@@ -172,7 +184,7 @@ async def clear_buttons(bot, msg: Message):
 @app.on_message(filters.private & filters.command("setcap"))
 async def set_cap(bot, msg: Message):
     if len(msg.command) < 2:
-        return await msg.reply_text("⚠️ Usage: /setcap <your caption>")
+        return await msg.reply_text("⚠️ Usage: `/setcap <your caption>`")
     caption = msg.text.split(" ", 1)[1]
     await users.update_one({"user_id": msg.from_user.id}, {"$set": {"custom_caption": caption}}, upsert=True)
     await msg.reply_text("✅ Custom caption set successfully!")
