@@ -300,9 +300,7 @@ async def callback_handler(bot, cq: CallbackQuery):
             media_msg = await bot.get_messages(cq.from_user.id, msg_id)
             user_caption = user.get("custom_caption") or ""
             fixed_caption = (
-                "🔥 Quality: HDTS\n"
-                "📌 Indian User Use 1.1.1.1 VPN\n"
-                "👉 Visit Site"
+                "ʙʏ:<a href='https://t.me/PrimeXBots'>@ᴘʀɪᴍᴇXʙᴏᴛꜱ</a>"
             )
             final_caption = ""
             if media_msg.caption:
@@ -320,8 +318,8 @@ async def callback_handler(bot, cq: CallbackQuery):
                 InlineKeyboardButton("❤️ ", callback_data=f"react_{msg_id}_love")
             ]
 
-            fixed_row = [InlineKeyboardButton("কিভাবে ডাউনলোড করবেন", url=REQUEST_GROUP_URL)]
-            all_buttons = [reaction_row] + custom_btns + [fixed_row]
+            #fixed_row = [InlineKeyboardButton("কিভাবে ডাউনলোড করবেন", url=REQUEST_GROUP_URL)]
+            all_buttons = [reaction_row] + custom_btns# + [fixed_row]
 
             copied_msg = await media_msg.copy(
                 chat_id=channel_id,
