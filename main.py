@@ -16,7 +16,7 @@ API_HASH = os.environ.get("API_HASH", "your_api_hash")
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "your_bot_token")
 MONGO_URL = os.environ.get("MONGO_URL", "your_mongodb_url")
 REQUEST_GROUP_URL = "https://t.me/Prime_Movie_Watch_Dawnload/71"
-AUTH_CHANNEL = -1002323796637
+AUTH_CHANNEL = -1002245813234
 
 # 🔹 MongoDB
 mongo_client = AsyncIOMotorClient(MONGO_URL)
@@ -87,7 +87,7 @@ async def start_handler(bot, msg: Message):
         btns = [[InlineKeyboardButton(f"✇ Join {chat.title} ✇", url=invite_link)],
                 [InlineKeyboardButton("🔄 Refresh", callback_data="refresh_check")]]
         await msg.reply_photo(
-            photo="https://i.postimg.cc/fyrXmg6S/file-000000004e7461faaef2bd964cbbd408.png",
+            photo="https://i.postimg.cc/xdkd1h4m/IMG-20250715-153124-952.jpg",
             caption=f"👋 Hello {msg.from_user.mention},\n\nJoin our channel to use the bot.",
             reply_markup=InlineKeyboardMarkup(btns)
         )
@@ -134,9 +134,9 @@ async def help_handler(bot, msg: Message):
 # 🟢 /about callback button
 @app.on_callback_query(filters.regex("about_btn"))
 async def about_callback(bot, cq: CallbackQuery):
-    about_text = """<b><blockquote>⍟───[  <a href='https://t.me/PrimeXBots'>MY ᴅᴇᴛᴀɪʟꜱ ʙy ᴘʀɪᴍᴇXʙᴏᴛs</a ]───⍟</blockquote>
+    about_text = """<b>⍟───[  <a href='https://t.me/PrimeXBots'>ᴍy ᴅᴇᴛᴀɪʟꜱ ʙy ᴘʀɪᴍᴇXʙᴏᴛs</a ]───⍟
     
-‣ ᴍʏ ɴᴀᴍᴇ : <a href=https://t.me/{}>{}</a>
+‣ ᴍʏ ɴᴀᴍᴇ : @Post_Generator_PrimeXBot
 ‣ ᴍʏ ʙᴇsᴛ ғʀɪᴇɴᴅ : <a href='tg://settings'>ᴛʜɪs ᴘᴇʀsᴏɴ</a> 
 ‣ ᴅᴇᴠᴇʟᴏᴘᴇʀ : <a href='https://t.me/Prime_Nayem'>ᴍʀ.ᴘʀɪᴍᴇ</a> 
 ‣ ᴜᴘᴅᴀᴛᴇꜱ ᴄʜᴀɴɴᴇʟ : <a href='https://t.me/PrimeXBots'>ᴘʀɪᴍᴇXʙᴏᴛꜱ</a> 
@@ -432,7 +432,7 @@ async def callback_handler(bot, cq: CallbackQuery):
 
         # 🔹 এখানে admin rights refresh check
         if not await ensure_admin(bot, channel_id):
-            return await cq.answer("❌ Bot is not admin or missing 'Post Messages' rights!", show_alert=True)
+            return await cq.answer("❌ Bot is not admin or missing 'Post Messages' rights! Please check the admin, if there is an admin then /start that channel. Then click on this button again./n/nমনে হয় কিছু সমস্যা হয়েছে দয়া করে এই চ্যানেলে এডমিন আছে কিনা বটে চেক করুন যদি থাকে তাহলে সেই চ্যানেলে /start সেন্ড করুন তারপর আবার এই বাটনে ক্লিক করুন", show_alert=True)
 
         try:
             media_msg = await bot.get_messages(cq.from_user.id, msg_id)
@@ -445,7 +445,7 @@ async def callback_handler(bot, cq: CallbackQuery):
                 final_caption += media_msg.caption + "\n\n"
             if user_caption:
                 final_caption += user_caption + "\n\n"
-            final_caption += fixed_caption
+            final_caption# += fixed_caption
 
             # Custom buttons
             custom_btns = [[InlineKeyboardButton(b["text"], url=b["url"])] for b in user.get("custom_buttons", [])]
