@@ -139,7 +139,7 @@ async def del_channel(bot, msg: Message):
 async def add_button(bot, msg: Message):
     if not msg.text or len(msg.text.split()) < 3:
         return await msg.reply_text(
-            "⚠️ Usage: <code>/addbutton <text> <url></code>\n\n"
+            "⚠️ Usage: `/addbutton text url`\n\n"
             "💡 Example: `/addbutton PrimeCineZone https://t.me/PrimeXBots`"
         )
 
@@ -184,7 +184,7 @@ async def clear_buttons(bot, msg: Message):
 @app.on_message(filters.private & filters.command("setcap"))
 async def set_cap(bot, msg: Message):
     if len(msg.command) < 2:
-        return await msg.reply_text("⚠️ Usage: <code>/setcap <your caption></code>")
+        return await msg.reply_text("⚠️ Usage: `/setcap your caption Here`")
     caption = msg.text.split(" ", 1)[1]
     await users.update_one({"user_id": msg.from_user.id}, {"$set": {"custom_caption": caption}}, upsert=True)
     await msg.reply_text("✅ Custom caption set successfully!")
