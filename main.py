@@ -56,8 +56,8 @@ async def is_admin(bot: Client, user_id: int, chat_id: int):
 async def save_channel(user_id: int, channel_id: int, channel_title: str):
     user = await users.find_one({"user_id": user_id})
     if not user:
-        await users.insert_one({"user_id": user_id, "channels": []})
-        user = {"user_id": user_id, "channels": []}
+        await users.insert_one({"user_id": user_id, "channels": [], "custom_caption": None})
+        user = {"user_id": user_id, "channels": [], "custom_caption": None}
 
     for ch in user["channels"]:
         if ch["id"] == channel_id:
@@ -74,7 +74,11 @@ async def start_handler(bot, msg: Message):
         "👋 Welcome!\n\n"
         "➕ Use /addchannel <id> to add a channel\n"
         "📌 Or just forward a post from your channel.\n"
-        "📂 Use /mychannels to check your saved channels."
+        "📂 Use /mychannels to check your saved channels.\n\n"
+        "🗑 Use /delchannel to delete a channel\n"
+        "✍️ Use /setcap <caption> to set custom caption\n"
+        "👀 Use /seecap to see your caption\n"
+        "❌ Use /delcap to delete your caption"
     )
 
 # 🟢 /addchannel <id>
@@ -133,6 +137,44 @@ async def my_channels(bot, msg: Message):
 
     await msg.reply_text("📂 Your saved channels:", reply_markup=InlineKeyboardMarkup(buttons))
 
+# 🟢 /delchannel
+@app.on_message(filters.private & filters.command("delchannel"))
+async def del_channel(bot, msg: Message):
+    user = await users.find_one({"user_id": msg.from_user.id})
+    if not user or not user["channels"]:
+        return await msg.reply_text("📂 You don’t have any channels saved yet.")
+
+    buttons = [
+        [InlineKeyboardButton(f"❌ {ch['title']}", callback_data=f"delch_{ch['id']}")]
+        for ch in user["channels"]
+    ]
+
+    await msg.reply_text("🗑 Select a channel to delete:", reply_markup=InlineKeyboardMarkup(buttons))
+
+# 🟢 /setcap
+@app.on_message(filters.private & filters.command("setcap"))
+async def set_cap(bot, msg: Message):
+    if len(msg.command) < 2:
+        return await msg.reply_text("⚠️ Usage: /setcap <your caption>")
+
+    caption = msg.text.split(" ", 1)[1]
+    await users.update_one({"user_id": msg.from_user.id}, {"$set": {"custom_caption": caption}}, upsert=True)
+    await msg.reply_text("✅ Custom caption set successfully!")
+
+# 🟢 /seecap
+@app.on_message(filters.private & filters.command("seecap"))
+async def see_cap(bot, msg: Message):
+    user = await users.find_one({"user_id": msg.from_user.id})
+    if not user or not user.get("custom_caption"):
+        return await msg.reply_text("⚠️ You don’t have any custom caption set.")
+    await msg.reply_text(f"📝 Your caption:\n\n{user['custom_caption']}")
+
+# 🟢 /delcap
+@app.on_message(filters.private & filters.command("delcap"))
+async def del_cap(bot, msg: Message):
+    await users.update_one({"user_id": msg.from_user.id}, {"$set": {"custom_caption": None}})
+    await msg.reply_text("🗑 Custom caption deleted!")
+
 # 🟢 মিডিয়া হ্যান্ডলার
 @app.on_message(filters.private & (filters.photo | filters.video))
 async def media_handler(bot, msg: Message):
@@ -154,6 +196,19 @@ async def media_handler(bot, msg: Message):
 async def callback_handler(bot, cq: CallbackQuery):
     data = cq.data
 
+    # চ্যানেল ডিলিট
+    if data.startswith("delch_"):
+        ch_id = int(data.split("_")[1])
+        user = await users.find_one({"user_id": cq.from_user.id})
+        if not user or not user.get("channels"):
+            return await cq.answer("⚠️ No channels found!", show_alert=True)
+
+        new_channels = [ch for ch in user["channels"] if ch["id"] != ch_id]
+        await users.update_one({"user_id": cq.from_user.id}, {"$set": {"channels": new_channels}})
+        await cq.answer("🗑 Channel deleted!", show_alert=True)
+        return
+
+    # মিডিয়া পোস্ট
     if data.startswith("sendto_"):
         _, msg_id, channel_id = data.split("_")
         msg_id = int(msg_id)
@@ -166,13 +221,21 @@ async def callback_handler(bot, cq: CallbackQuery):
         try:
             media_msg = await bot.get_messages(cq.from_user.id, msg_id)
 
+            # ইউজারের কাস্টম ক্যাপশন
+            user_caption = user.get("custom_caption") or ""
+            # আপনার পার্মানেন্ট ক্যাপশন
             fixed_caption = (
                 "🔥 Quality: HDTS\n"
                 "📌 Indian User Use 1.1.1.1 VPN\n"
                 "👉 Visit Site"
             )
 
-            final_caption = f"{media_msg.caption}\n\n{fixed_caption}" if media_msg.caption else fixed_caption
+            final_caption = ""
+            if media_msg.caption:
+                final_caption += media_msg.caption + "\n\n"
+            if user_caption:
+                final_caption += user_caption + "\n\n"
+            final_caption += fixed_caption
 
             buttons = InlineKeyboardMarkup(
                 [
