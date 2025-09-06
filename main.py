@@ -10,6 +10,7 @@ from pyrogram.types import (
 from motor.motor_asyncio import AsyncIOMotorClient
 from flask import Flask
 import threading
+from pyrogram.errors import UserNotParticipant, ChatAdminRequired 
 
 # 🔹 লগিং
 logging.basicConfig(level=logging.INFO)
@@ -21,6 +22,7 @@ API_HASH = os.environ.get("API_HASH", "your_api_hash")
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "your_bot_token")
 MONGO_URL = os.environ.get("MONGO_URL", "your_mongodb_url")
 REQUEST_GROUP_URL = "https://t.me/PrimeCineZone/31"
+AUTH_CHANNEL = -1002323796637
 
 # 🔹 MongoDB
 mongo_client = AsyncIOMotorClient(MONGO_URL)
@@ -44,7 +46,6 @@ def run_flask():
 
 threading.Thread(target=run_flask).start()
 
-AUTH_CHANNEL = -1002323796637
 
 async def is_subscribed(bot, user_id, channels):
     for channel in channels:
@@ -60,7 +61,7 @@ async def is_subscribed(bot, user_id, channels):
             print(f"Error in checking subscription: {e}")  # ✅ লগ রাখা হবে
             continue
     return True  # ✅ যদি সবগুলো চ্যানেলে জয়েন থাকে তাহলে True রিটার্ন করবে
-
+    
 # 🟢 হেল্পার ফাংশন
 async def is_admin(bot: Client, user_id: int, chat_id: int):
     try:
