@@ -1,22 +1,16 @@
 import os
 import logging
 from pyrogram import Client, filters, enums
-from pyrogram.types import (
-    Message,
-    InlineKeyboardMarkup,
-    InlineKeyboardButton,
-    CallbackQuery
-)
+from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 from motor.motor_asyncio import AsyncIOMotorClient
 from flask import Flask
 import threading
-from pyrogram.errors import UserNotParticipant, ChatAdminRequired 
 
-# 🔹 লগিং
+# 🔹 Logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# 🔹 কনফিগ
+# 🔹 Config
 API_ID = int(os.environ.get("API_ID", 12345))
 API_HASH = os.environ.get("API_HASH", "your_api_hash")
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "your_bot_token")
@@ -28,69 +22,46 @@ AUTH_CHANNEL = -1002323796637
 mongo_client = AsyncIOMotorClient(MONGO_URL)
 db = mongo_client["postbot"]
 users = db["users"]
-reactions_collection = db["reactions"]  # For reaction system
+reactions_collection = db["reactions"]
 
-# 🔹 বট ক্লায়েন্ট
+# 🔹 Pyrogram Bot
 app = Client("ChannelPostBot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
 
-# 🔹 Flask health server
+# 🔹 Flask health check
 flask_app = Flask(__name__)
-
 @flask_app.route("/")
 def index():
     return "Bot is running!", 200
+threading.Thread(target=lambda: flask_app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))).start()
 
-def run_flask():
-    port = int(os.environ.get("PORT", 8080))
-    flask_app.run(host="0.0.0.0", port=port)
-
-threading.Thread(target=run_flask).start()
-
-
+# 🔹 Helpers
 async def is_subscribed(bot, user_id, channels):
+    if isinstance(channels, int): channels = [channels]
     for channel in channels:
         try:
-            chat_member = await bot.get_chat_member(channel, user_id)
-            if chat_member.status in ["kicked", "banned"]:
-                return False  # ✅ ব্যান থাকলে False রিটার্ন করবে
-        except UserNotParticipant:
-            return False  # ✅ ইউজার যদি না থাকে তাহলে False রিটার্ন করবে
-        except ChatAdminRequired:
-            continue  # ✅ যদি বট অ্যাডমিন না হয়, তাহলে স্কিপ করবে
-        except Exception as e:
-            print(f"Error in checking subscription: {e}")  # ✅ লগ রাখা হবে
-            continue
-    return True  # ✅ যদি সবগুলো চ্যানেলে জয়েন থাকে তাহলে True রিটার্ন করবে
-    
-# 🟢 হেল্পার ফাংশন
-async def is_admin(bot: Client, user_id: int, chat_id: int):
+            member = await bot.get_chat_member(channel, user_id)
+            if member.status in ["kicked", "banned"]:
+                return False
+        except Exception:
+            return False
+    return True
+
+async def is_admin(bot, user_id: int, chat_id: int):
     try:
         member = await bot.get_chat_member(chat_id, user_id)
         return member.status in [enums.ChatMemberStatus.ADMINISTRATOR, enums.ChatMemberStatus.OWNER]
     except Exception:
         return False
 
-# 🔹 নতুন ফাংশন → admin rights refresh checker
 async def ensure_admin(bot: Client, channel_id: int) -> bool:
     try:
         me = await bot.get_me()
         member = await bot.get_chat_member(channel_id, me.id)
-
-        # যদি OWNER হয় তাহলে সবসময় পারবে
-        if member.status == enums.ChatMemberStatus.OWNER:
-            return True
-
-        # যদি ADMIN হয় তাহলে privileges চেক করতে হবে
+        if member.status == enums.ChatMemberStatus.OWNER: return True
         if member.status == enums.ChatMemberStatus.ADMINISTRATOR:
-            # Pyrogram v2 -> member.privileges
-            if hasattr(member, "privileges") and member.privileges:
-                return member.privileges.can_post_messages
-            # Pyrogram v1 fallback (কিছু version এ privileges থাকে না)
-            if hasattr(member, "can_post_messages"):
-                return member.can_post_messages
-
+            if hasattr(member, "privileges") and member.privileges: return member.privileges.can_post_messages
+            if hasattr(member, "can_post_messages"): return member.can_post_messages
         return False
-
     except Exception as e:
         logger.error(f"Admin check failed for {channel_id}: {e}")
         return False
@@ -100,11 +71,8 @@ async def save_channel(user_id: int, channel_id: int, channel_title: str):
     if not user:
         await users.insert_one({"user_id": user_id, "channels": [], "custom_caption": None, "custom_buttons": []})
         user = {"user_id": user_id, "channels": [], "custom_caption": None, "custom_buttons": []}
-
-    for ch in user["channels"]:
-        if ch["id"] == channel_id:
-            return False
-
+    if any(ch["id"] == channel_id for ch in user["channels"]):
+        return False
     user["channels"].append({"id": channel_id, "title": channel_title})
     await users.update_one({"user_id": user_id}, {"$set": {"channels": user["channels"]}})
     return True
@@ -112,53 +80,93 @@ async def save_channel(user_id: int, channel_id: int, channel_title: str):
 # 🟢 /start
 @app.on_message(filters.private & filters.command("start"))
 async def start_handler(bot, msg: Message):
-    # Ensure AUTH_CHANNEL is a list
-    if isinstance(AUTH_CHANNEL, str):
-        AUTH_CHANNELS = [AUTH_CHANNEL]
-    else:
-        AUTH_CHANNELS = AUTH_CHANNEL
-
-    # Check subscription
-    subscribed = await is_subscribed(client, user_id, AUTH_CHANNELS)
-
+    subscribed = await is_subscribed(bot, msg.from_user.id, AUTH_CHANNEL)
     if not subscribed:
-        btn = []
-        for channel in AUTH_CHANNELS:
-            try:
-                chat = await client.get_chat(channel)
-                invite_link = chat.invite_link or await client.export_chat_invite_link(channel)
-                btn.append([InlineKeyboardButton(f"✇ Join {chat.title} ✇", url=invite_link)])
-            except Exception as e:
-                print(f"Error: {e}")
-
-        btn.append([InlineKeyboardButton("🔄 Refresh", callback_data="refresh_check")])
-
-        # Force subscription message
-        await message.reply_photo(
-            photo="https://i.postimg.cc/xdkd1h4m/IMG-20250715-153124-952.jpg",
-            caption=(
-                f"👋 Hello {message.from_user.mention},\n\n"
-                "If you want to use me, you must first join our updates channel. "
-                "Click on \"✇ Join Our Updates Channel ✇\" button. Then click on the \"Request to Join\" button. "
-                "After joining, click on \"Refresh\" button."
-            ),
-            reply_markup=InlineKeyboardMarkup(btn)
+        chat = await bot.get_chat(AUTH_CHANNEL)
+        invite_link = chat.invite_link or await bot.export_chat_invite_link(AUTH_CHANNEL)
+        btns = [[InlineKeyboardButton(f"✇ Join {chat.title} ✇", url=invite_link)],
+                [InlineKeyboardButton("🔄 Refresh", callback_data="refresh_check")]]
+        await msg.reply_photo(
+            photo="https://i.postimg.cc/fyrXmg6S/file-000000004e7461faaef2bd964cbbd408.png",
+            caption=f"👋 Hello {msg.from_user.mention},\n\nJoin our channel to use the bot.",
+            reply_markup=InlineKeyboardMarkup(btns)
         )
-        return  
-    await msg.reply_text(
-        "👋 Welcome!\n\n"
-        "➕ Use /addchannel <id> → Add a channel\n"
-        "📌 Or forward a post from your channel\n"
+        return
+    buttons = [
+        [
+            InlineKeyboardButton("✪ ꜱᴜᴘᴘᴏʀᴛ ɢʀᴏᴜᴘ ✪", url="https://t.me/Prime_Support_group"),
+            InlineKeyboardButton("〄 ᴍᴏᴠɪᴇ ᴄʜᴀɴɴᴇʟ 〄", url="https://t.me/PrimeCineZone")
+        ],
+        [InlineKeyboardButton("〄 ᴜᴘᴅᴀᴛᴇs ᴄʜᴀɴɴᴇʟ 〄", url="https://t.me/PrimeXBots")],
+        [
+            InlineKeyboardButton("〆 ʜᴇʟᴘ 〆", callback_data="help_btn"),
+            InlineKeyboardButton("〆 ᴀʙᴏᴜᴛ 〆", callback_data="about_btn")
+        ],
+        [InlineKeyboardButton("✧ ᴄʀᴇᴀᴛᴏʀ ✧", url="https://t.me/Prime_Nayem")]
+    ]
+    await msg.reply_photo(
+        photo="https://i.postimg.cc/fyrXmg6S/file-000000004e7461faaef2bd964cbbd408.png",
+        caption=f"👋 Hi {msg.from_user.mention},\nI am **Post Generator Prime Bot** 🤖\n\nUse the buttons below to navigate.",
+        reply_markup=InlineKeyboardMarkup(buttons)
+    )
+
+# 🟢 /help callback
+@app.on_message(filters.private & filters.command("help"))
+async def help_handler(bot, msg: Message):
+    help_text = (
+        "📚 **Help Menu**\n\n"
+        "➕ /addchannel <id> → Add a channel\n"
+        "📌 Forward a post → Save channel automatically\n"
         "📂 /mychannels → See saved channels\n"
         "🗑 /delchannel → Delete channel\n\n"
         "✍️ /setcap <caption> → Set custom caption\n"
-        "👀 /seecap → See caption\n"
+        "👀 /seecap → View caption\n"
         "❌ /delcap → Delete caption\n\n"
         "🔘 /addbutton <text> <url> → Add custom button\n"
-        "📂 /mybuttons → See your buttons\n"
+        "📂 /mybuttons → View custom buttons\n"
         "🗑 /delbutton → Delete a button\n"
-        "♻️ /clearbuttons → Clear all buttons"
+        "♻️ /clearbuttons → Clear all buttons\n\n"
+        "📤 Send photo/video → Select channel to post\n"
+        "👍 React to posts with Like ❤️ Love"
     )
+    await msg.reply_text(help_text)
+
+# 🟢 /about callback
+@app.on_callback_query(filters.regex("about_btn"))
+async def about_callback(bot, cq: CallbackQuery):
+    about_text = """<b><blockquote>⍟───[  <a href='https://t.me/PrimeXBots'>MY ᴅᴇᴛᴀɪʟꜱ ʙy ᴘʀɪᴍᴇXʙᴏᴛs</a ]───⍟</blockquote>
+‣ ᴍʏ ɴᴀᴍᴇ : <a href=https://t.me/Prime_Nayem>Prime Nayem</a>
+‣ ᴅᴇᴠᴇʟᴏᴘᴇʀ : <a href='https://t.me/Prime_Nayem'>ᴍʀ.ᴘʀɪᴍᴇ</a>
+‣ ᴜᴘᴅᴀᴛᴇꜱ ᴄʜᴀɴɴᴇʟ : <a href='https://t.me/PrimeXBots'>ᴘʀɪᴍᴇXʙᴏᴛꜱ</a>
+‣ ᴍᴀɪɴ ᴄʜᴀɴɴᴇʟ : <a href='https://t.me/PrimeCineZone'>Pʀɪᴍᴇ Cɪɴᴇᴢᴏɴᴇ</a>
+‣ ѕᴜᴘᴘᴏʀᴛ ɢʀᴏᴜᴘ : <a href='https://t.me/Prime_Support_group'>ᴘʀɪᴍᴇ X ѕᴜᴘᴘᴏʀᴛ</a>
+‣ ᴅᴀᴛᴀ ʙᴀsᴇ : <a href='https://www.mongodb.com/'>ᴍᴏɴɢᴏ ᴅʙ</a>
+‣ ʙᴏᴛ sᴇʀᴠᴇʀ : <a href='https://heroku.com'>ʜᴇʀᴏᴋᴜ</a>
+‣ ʙᴜɪʟᴅ sᴛᴀᴛᴜs : ᴠ2.7.1 [sᴛᴀʙʟᴇ]></b>"""
+    await cq.message.edit_text(about_text, disable_web_page_preview=True, parse_mode="html")
+    await cq.answer()
+
+# 🟢 /help callback button
+@app.on_callback_query(filters.regex("help_btn"))
+async def help_callback(bot, cq: CallbackQuery):
+    help_text = (
+        "📚 **Help Menu**\n\n"
+        "➕ /addchannel <id> → Add a channel\n"
+        "📌 Forward a post → Save channel automatically\n"
+        "📂 /mychannels → See saved channels\n"
+        "🗑 /delchannel → Delete channel\n\n"
+        "✍️ /setcap <caption> → Set custom caption\n"
+        "👀 /seecap → View caption\n"
+        "❌ /delcap → Delete caption\n\n"
+        "🔘 /addbutton <text> <url> → Add custom button\n"
+        "📂 /mybuttons → View custom buttons\n"
+        "🗑 /delbutton → Delete a button\n"
+        "♻️ /clearbuttons → Clear all buttons\n\n"
+        "📤 Send photo/video → Select channel to post\n"
+        "👍 React to posts with Like ❤️ Love"
+    )
+    await cq.message.edit_text(help_text)
+    await cq.answer()
 
 # 🟢 Channel & Button Commands
 @app.on_message(filters.private & filters.command("addchannel"))
@@ -287,20 +295,16 @@ async def media_handler(bot, msg: Message):
     buttons = [[InlineKeyboardButton(ch["title"], callback_data=f"sendto_{msg.id}_{ch['id']}")] for ch in user["channels"]]
     await msg.reply_text("📤 Select a channel to post:", reply_markup=InlineKeyboardMarkup(buttons))
 
-@app.on_callback_query(filters.regex("refresh_check"))  
-async def refresh_callback(client: Client, query: CallbackQuery):  
-    user_id = query.from_user.id  
-    subscribed = await is_subscribed(client, user_id, AUTH_CHANNEL)  
-
+# 🟢 Subscription refresh
+@app.on_callback_query(filters.regex("refresh_check"))
+async def refresh_callback(bot, cq: CallbackQuery):
+    subscribed = await is_subscribed(bot, cq.from_user.id, AUTH_CHANNEL)
     if subscribed:
-        # ✅ যদি ইউজার চ্যানেলে জয়েন থাকে, তাহলে পুরাতন মেসেজ ডিলিট করে নতুন মেসেজ দেবে
-        await query.message.delete()  
-        await query.message.reply_text(
-            "✅ Thank You For Joining! Now You Can Use Me."
-        )
+        await cq.message.delete()
+        await cq.message.reply_text("✅ Thank you for joining! Now you can use the bot.")
     else:
-        # ❌ যদি ইউজার জয়েন না করে থাকে, তাহলে পপ-আপ দেখাবে
-        await query.answer("❌ You have not joined yet. Please join first, then refresh.", show_alert=True)
+        await cq.answer("❌ You have not joined yet. Please join first, then refresh.", show_alert=True)
+
 
 # 🟢 Callback Handler (Channel Delete, Button Delete, Media Post, Reactions)
 @app.on_callback_query()
