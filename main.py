@@ -8,6 +8,8 @@ from pyrogram.types import (
     CallbackQuery
 )
 from motor.motor_asyncio import AsyncIOMotorClient
+from flask import Flask
+import threading
 
 # 🔹 লগিং
 logging.basicConfig(level=logging.INFO)
@@ -29,6 +31,19 @@ users = db["users"]
 # 🔹 বট ক্লায়েন্ট
 app = Client("ChannelPostBot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
 
+# 🔹 Flask health server
+flask_app = Flask(__name__)
+
+@flask_app.route("/")
+def index():
+    return "Bot is running!", 200
+
+def run_flask():
+    port = int(os.environ.get("PORT", 8080))  # Render/Koyeb এ PORT সেট করে দেয়
+    flask_app.run(host="0.0.0.0", port=port)
+
+# Flask আলাদা থ্রেডে চালানো হবে
+threading.Thread(target=run_flask).start()
 
 # 🟢 হেল্পার ফাংশন
 async def is_admin(bot: Client, user_id: int, chat_id: int):
