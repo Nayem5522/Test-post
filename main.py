@@ -75,16 +75,6 @@ async def save_channel(user_id: int, channel_id: int, channel_title: str):
 # 🟢 /start
 @app.on_message(filters.private & filters.command("start"))
 async def start_handler(bot, msg: Message):
-    # ❗ ফোর্স সাবস্ক্রিপশন চেক যোগ করা হয়েছে
-    is_joined, keyboard = await check_fsub(bot, msg.from_user.id)
-    if not is_joined:
-        await msg.reply_text(
-            "👋 Welcome!\n\n"
-            "⚠️ You must join our channels to use this bot.",
-            reply_markup=keyboard
-        )
-        return
-
     await msg.reply_text(
         "👋 Welcome!\n\n"
         "➕ Use /addchannel <id> → Add a channel\n"
@@ -212,7 +202,6 @@ async def add_button(bot, msg: Message):
     
 @app.on_message(filters.private & filters.command("mybuttons"))
 async def my_buttons(bot, msg: Message):
-    
 
     user = await users_collection.find_one({"user_id": msg.from_user.id})
     if not user or not user.get("custom_buttons"):
@@ -249,14 +238,6 @@ async def set_cap(bot, msg: Message):
 
 @app.on_message(filters.private & filters.command("seecap"))
 async def see_cap(bot, msg: Message):
-    # ❗ ফোর্স সাবস্ক্রিপশন চেক যোগ করা হয়েছে
-    is_joined, keyboard = await check_fsub(bot, msg.from_user.id)
-    if not is_joined:
-        await msg.reply_text(
-            "⚠️ You must join our channels to use this bot.",
-            reply_markup=keyboard
-        )
-        return
 
     user = await users_collection.find_one({"user_id": msg.from_user.id})
     if not user or not user.get("custom_caption"):
