@@ -188,12 +188,23 @@ async def callback_handler(bot, cq: CallbackQuery):
         def format_btn(emoji, count, cdata):
             return InlineKeyboardButton(f"{emoji} {count}" if count > 0 else emoji, callback_data=cdata)
 
-        buttons = InlineKeyboardMarkup([
-            [format_btn("👍", like_count, "like"), format_btn("❤️", love_count, "love")],
-            [InlineKeyboardButton("কিভাবে ডাউনলোড করবেন", url=REQUEST_GROUP_URL)]
-        ])
+        # ✅ Preserve custom buttons
+        orig_buttons = cq.message.reply_markup.inline_keyboard if cq.message.reply_markup else []
 
-        await cq.message.edit_reply_markup(reply_markup=buttons)
+        new_buttons = []
+        for row in orig_buttons:
+            new_row = []
+            for btn in row:
+                if btn.callback_data in ["like", "love"]:
+                    if btn.callback_data == "like":
+                        new_row.append(format_btn("👍", like_count, "like"))
+                    elif btn.callback_data == "love":
+                        new_row.append(format_btn("❤️", love_count, "love"))
+                else:
+                    new_row.append(btn)
+            new_buttons.append(new_row)
+
+        await cq.message.edit_reply_markup(reply_markup=InlineKeyboardMarkup(new_buttons))
         return await cq.answer("✅ Reaction updated!")
 
     # ✅ Delete channel
