@@ -302,6 +302,54 @@ async def media_handler(bot, msg: Message):
     buttons = [[InlineKeyboardButton(ch["title"], callback_data=f"sendto_{msg.id}_{ch['id']}")] for ch in user["channels"]]
     await msg.reply_text("📤 Select a channel to post:", reply_markup=InlineKeyboardMarkup(buttons))
 
+# 🔹 Prime_Adminid কে owner হিসেবে চেক
+OWNER_ID = 5926160191  # <-- আপনার টেলিগ্রাম আইডি এখানে দিন (int)
+
+# 🟢 /stats
+@app.on_message(filters.private & filters.command("stats"))
+async def stats_handler(bot, msg: Message):
+    if msg.from_user.id != OWNER_ID:
+        return await msg.reply_text("❌ You are not authorized to use this command!")
+
+    total_users = await users.count_documents({})
+    total_channels = 0
+    async for user in users.find({}):
+        total_channels += len(user.get("channels", []))
+
+    await msg.reply_text(
+        f"📊 Bot Stats:\n\n"
+        f"👤 Total Users: {total_users}\n"
+        f"📂 Total Channels Saved: {total_channels}"
+    )
+
+
+# 🟢 /broadcast
+@app.on_message(filters.private & filters.command("broadcast"))
+async def broadcast_handler(bot, msg: Message):
+    if msg.from_user.id != OWNER_ID:
+        return await msg.reply_text("❌ You are not authorized to use this command!")
+
+    if len(msg.command) < 2:
+        return await msg.reply_text("⚠️ Usage: `/broadcast Your message here`")
+
+    broadcast_text = msg.text.split(" ", 1)[1]
+
+    sent_count = 0
+    failed_count = 0
+
+    async for user in users.find({}):
+        try:
+            await bot.send_message(user["user_id"], broadcast_text)
+            sent_count += 1
+        except Exception:
+            failed_count += 1
+
+    await msg.reply_text(
+        f"✅ Broadcast completed!\n\n"
+        f"📤 Sent: {sent_count}\n"
+        f"❌ Failed: {failed_count}"
+    )
+
 # 🟢 Subscription refresh
 @app.on_callback_query(filters.regex("refresh_check"))
 async def refresh_callback(bot, cq: CallbackQuery):
