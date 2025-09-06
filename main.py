@@ -151,30 +151,60 @@ async def del_cap(bot, msg: Message):
     await users.update_one({"user_id": msg.from_user.id}, {"$set": {"custom_caption": None}})
     await msg.reply_text("🗑 Custom caption deleted!")
 
-# 🟢 Callback হ্যান্ডলার (চ্যানেল ডিলিট + বাটন ডিলিট + মিডিয়া পোস্ট)
+
+# 🟢 Callback হ্যান্ডলার
 @app.on_callback_query()
 async def callback_handler(bot, cq: CallbackQuery):
     data = cq.data
 
-    # চ্যানেল ডিলিট
-    if data.startswith("delch_"):
-        ch_id = int(data.split("_")[1])
-        user = await users.find_one({"user_id": cq.from_user.id})
-        new_channels = [ch for ch in user["channels"] if ch["id"] != ch_id]
-        await users.update_one({"user_id": cq.from_user.id}, {"$set": {"channels": new_channels}})
-        await cq.answer("🗑 Channel deleted!", show_alert=True)
-        return
+    # ✅ Reaction system
+    if data in ["like", "love"]:
+        chat_id = cq.message.chat.id
+        post_id = cq.message.id
+        user_id = cq.from_user.id
 
-    # বাটন ডিলিট
-    if data.startswith("delbtn_"):
-        text = data.split("_", 1)[1]
-        user = await users.find_one({"user_id": cq.from_user.id})
-        new_buttons = [b for b in user["custom_buttons"] if b["text"] != text]
-        await users.update_one({"user_id": cq.from_user.id}, {"$set": {"custom_buttons": new_buttons}})
-        await cq.answer(f"🗑 Button '{text}' deleted!", show_alert=True)
-        return
+        reactions_col = db["reactions"]
+        doc = await reactions_col.find_one({"chat_id": chat_id, "post_id": post_id})
+        if not doc:
+            doc = {
+                "chat_id": chat_id,
+                "post_id": post_id,
+                "reactions": {"like": [], "love": []}
+            }
+            await reactions_col.insert_one(doc)
 
-    # মিডিয়া পোস্ট
+        # পুরনো রিঅ্যাকশন রিমুভ করা
+        for rtype in ["like", "love"]:
+            if user_id in doc["reactions"][rtype]:
+                doc["reactions"][rtype].remove(user_id)
+
+        # নতুন রিঅ্যাকশন অ্যাড করা
+        doc["reactions"][data].append(user_id)
+
+        # আপডেট MongoDB
+        await reactions_col.update_one(
+            {"chat_id": chat_id, "post_id": post_id},
+            {"$set": {"reactions": doc["reactions"]}}
+        )
+
+        # কাউন্ট বের করা
+        like_count = len(doc["reactions"]["like"])
+        love_count = len(doc["reactions"]["love"])
+
+        # নতুন বাটন বানানো
+        buttons = InlineKeyboardMarkup([
+            [
+                InlineKeyboardButton(f"👍 {like_count}", callback_data="like"),
+                InlineKeyboardButton(f"❤️ {love_count}", callback_data="love")
+            ],
+            [InlineKeyboardButton("কিভাবে ডাউনলোড করবেন", url=REQUEST_GROUP_URL)]
+        ])
+
+        # বাটন আপডেট
+        await cq.message.edit_reply_markup(reply_markup=buttons)
+        return await cq.answer("✅ Reaction updated!")
+
+    # ✅ Media send handler
     if data.startswith("sendto_"):
         _, msg_id, channel_id = data.split("_")
         msg_id = int(msg_id)
@@ -187,33 +217,26 @@ async def callback_handler(bot, cq: CallbackQuery):
         try:
             media_msg = await bot.get_messages(cq.from_user.id, msg_id)
 
-            user_caption = user.get("custom_caption") or ""
             fixed_caption = (
                 "🔥 Quality: HDTS\n"
                 "📌 Indian User Use 1.1.1.1 VPN\n"
                 "👉 Visit Site"
             )
 
-            final_caption = ""
-            if media_msg.caption:
-                final_caption += media_msg.caption + "\n\n"
-            if user_caption:
-                final_caption += user_caption + "\n\n"
-            final_caption += fixed_caption
+            final_caption = f"{media_msg.caption}\n\n{fixed_caption}" if media_msg.caption else fixed_caption
 
-            # ইউজারের কাস্টম বাটন + আপনার ফিক্সড বাটন
-            custom_btns = [[InlineKeyboardButton(b["text"], url=b["url"])] for b in user.get("custom_buttons", [])]
-            fixed_btns = [
-                [InlineKeyboardButton("👍", callback_data="like"),
-                 InlineKeyboardButton("❤️", callback_data="love")],
+            buttons = InlineKeyboardMarkup([
+                [
+                    InlineKeyboardButton("👍 0", callback_data="like"),
+                    InlineKeyboardButton("❤️ 0", callback_data="love")
+                ],
                 [InlineKeyboardButton("কিভাবে ডাউনলোড করবেন", url=REQUEST_GROUP_URL)]
-            ]
-            all_buttons = custom_btns + fixed_btns
+            ])
 
             await media_msg.copy(
                 chat_id=channel_id,
                 caption=final_caption,
-                reply_markup=InlineKeyboardMarkup(all_buttons)
+                reply_markup=buttons
             )
 
             await cq.answer("✅ Posted successfully!", show_alert=True)
@@ -221,7 +244,6 @@ async def callback_handler(bot, cq: CallbackQuery):
         except Exception as e:
             logger.error(e)
             await cq.answer("❌ Failed to post!", show_alert=True)
-
 
 # 🟢 মিডিয়া হ্যান্ডলার
 @app.on_message(filters.private & (filters.photo | filters.video))
