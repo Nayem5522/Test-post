@@ -77,14 +77,14 @@ async def check_fsub(bot: Client, user_id: int):
 
     not_joined_channels = []
     keyboard = []
-    
+
     for channel_id in FSUB_CHANNELS:
         try:
             chat_member = await bot.get_chat_member(channel_id, user_id)
             if chat_member.status in [
                 enums.ChatMemberStatus.BANNED,
                 enums.ChatMemberStatus.LEFT,
-                enums.ChatMemberStatus.RESTRICTED  # Added restricted for thorough check
+                enums.ChatMemberStatus.RESTRICTED
             ]:
                 not_joined_channels.append(channel_id)
         except Exception as e:
@@ -93,25 +93,35 @@ async def check_fsub(bot: Client, user_id: int):
             not_joined_channels.append(channel_id)
 
     if not not_joined_channels:
-        return True, None # All channels joined
+        return True, None  # All channels joined
 
     # Construct force subscribe buttons for not joined channels
     for channel_id in not_joined_channels:
         try:
             chat = await bot.get_chat(channel_id)
-            if chat.type == enums.ChatType.PRIVATE:
-                # Private channel, request to join link
-                invite_link = await bot.create_chat_invite_link(chat_id=channel_id, member_limit=1) # Temporary invite link
+
+            if chat.type in [enums.ChatType.PRIVATE, enums.ChatType.CHANNEL] and not chat.username:
+                # Private channel or no username → create invite link
+                invite_link = await bot.create_chat_invite_link(chat_id=channel_id, member_limit=1)
                 keyboard.append([InlineKeyboardButton(f"➕ {chat.title}", url=invite_link.invite_link)])
             else:
-                # Public channel, direct link
-                keyboard.append([InlineKeyboardButton(f"➕ {chat.title}", url=chat.invite_link or chat.username or f"https://t.me/{chat.id}")])
+                # Public channel with username
+                if chat.username:
+                    url = f"https://t.me/{chat.username}"
+                else:
+                    # Fallback: create invite link if username missing
+                    invite_link = await bot.create_chat_invite_link(chat_id=channel_id, member_limit=1)
+                    url = invite_link.invite_link
+                keyboard.append([InlineKeyboardButton(f"➕ {chat.title}", url=url)])
+
         except Exception as e:
             logger.error(f"Error getting chat info or creating invite link for {channel_id}: {e}")
-            # Fallback for unknown error, try with just ID
+            # Fallback for unknown error
             keyboard.append([InlineKeyboardButton(f"➕ Channel {channel_id}", url=f"https://t.me/{channel_id}")])
 
+    # Add refresh button
     keyboard.append([InlineKeyboardButton("🔄 Refresh", callback_data="fsub_refresh")])
+
     return False, InlineKeyboardMarkup(keyboard)
 
 # 🟢 /start
