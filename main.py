@@ -414,8 +414,9 @@ async def callback_handler(bot, cq: CallbackQuery):
         # Preserve custom and fixed buttons
         current_buttons = cq.message.reply_markup.inline_keyboard
         custom_buttons = current_buttons[1:-1] if len(current_buttons) > 2 else []
-        fixed_row = current_buttons[-1] if current_buttons else [InlineKeyboardButton("কিভাবে ডাউনলোড করবেন", url=REQUEST_GROUP_URL)]
-
+        #fixed_row = current_buttons[-1] if current_buttons else  [InlineKeyboardButton("কিভাবে ডাউনলোড করবেন", url=REQUEST_GROUP_URL)]
+        fixed_row = current_buttons[-1] if current_buttons else []
+        
         reaction_row = [
             InlineKeyboardButton(f"👍 {like_count}", callback_data=f"react_{msg_id}_like"),
             InlineKeyboardButton(f"❤️ {love_count}", callback_data=f"react_{msg_id}_love")
@@ -436,7 +437,7 @@ async def callback_handler(bot, cq: CallbackQuery):
 
         # 🔹 এখানে admin rights refresh check
         if not await ensure_admin(bot, channel_id):
-            return await cq.answer("❌ Bot is not admin or missing 'Post Messages' rights! Please check the admin, if there is an admin then /start that channel. Then click on this button again./n/nমনে হয় কিছু সমস্যা হয়েছে দয়া করে এই চ্যানেলে এডমিন আছে কিনা বটে চেক করুন যদি থাকে তাহলে সেই চ্যানেলে /start সেন্ড করুন তারপর আবার এই বাটনে ক্লিক করুন", show_alert=True)
+            return await cq.answer("❌ Bot is not admin or missing 'Post Messages' rights!", show_alert=True)
 
         try:
             media_msg = await bot.get_messages(cq.from_user.id, msg_id)
