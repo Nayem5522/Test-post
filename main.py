@@ -134,7 +134,7 @@ async def help_handler(bot, msg: Message):
 # 🟢 /about callback button
 @app.on_callback_query(filters.regex("about_btn"))
 async def about_callback(bot, cq: CallbackQuery):
-    about_text = """<b>⍟───[  <a href='https://t.me/PrimeXBots'>ᴍy ᴅᴇᴛᴀɪʟꜱ ʙy ᴘʀɪᴍᴇXʙᴏᴛs</a ]───⍟
+    about_text = """<b>✦✗✦<a href='https://t.me/PrimeXBots'>ᴍy ᴅᴇᴛᴀɪʟꜱ ʙy ᴘʀɪᴍᴇXʙᴏᴛs</a ✦✗✦
     
 ‣ ᴍʏ ɴᴀᴍᴇ : @Post_Generator_PrimeXBot
 ‣ ᴍʏ ʙᴇsᴛ ғʀɪᴇɴᴅ : <a href='tg://settings'>ᴛʜɪs ᴘᴇʀsᴏɴ</a> 
@@ -228,15 +228,19 @@ async def del_channel(bot, msg: Message):
 # 🟢 Custom Button Commands
 @app.on_message(filters.private & filters.command("addbutton"))
 async def add_button(bot, msg: Message):
-    if not msg.text or len(msg.text.split()) < 3:
+    if not msg.text or len(msg.text.split(maxsplit=1)) < 2:
         return await msg.reply_text(
             "⚠️ Usage: `/addbutton text url`\n\n"
-            "💡 Example: `/addbutton PrimeCineZone https://t.me/PrimeXBots`"
+            "💡 Example: `/addbutton Prime Cine Zone https://t.me/PrimeXBots`"
         )
 
-    parts = msg.text.split(maxsplit=2)
-    text = parts[1]
-    url = parts[2]
+    # কমান্ড বাদ দিয়ে বাকি অংশ
+    args = msg.text.split(maxsplit=1)[1]
+
+    # টেক্সট আর URL আলাদা করা (শেষ স্পেস দিয়ে ভাগ হবে)
+    if " " not in args:
+        return await msg.reply_text("⚠️ Please provide both text and URL!")
+    text, url = args.rsplit(" ", 1)
 
     user = await users.find_one({"user_id": msg.from_user.id}) or {}
     buttons = user.get("custom_buttons", [])
