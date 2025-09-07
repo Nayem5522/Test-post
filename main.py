@@ -542,7 +542,7 @@ async def callback_handler(bot, cq: CallbackQuery):
                 final_caption += media_msg.caption + "\n\n"
             if user_caption:
                 final_caption += user_caption + "\n\n"
-            final_caption += fixed_caption
+            final_caption #+= fixed_caption
 
             # Custom buttons
             custom_btns = [[InlineKeyboardButton(b["text"], url=b["url"])] for b in user.get("custom_buttons", [])]
@@ -553,8 +553,8 @@ async def callback_handler(bot, cq: CallbackQuery):
                 InlineKeyboardButton("❤️", callback_data=f"react_{msg_id}_love")
             ]
 
-            fixed_row = [InlineKeyboardButton("কিভাবে ডাউনলোড করবেন", url=REQUEST_GROUP_URL)]
-            all_buttons = [reaction_row] + custom_btns + [fixed_row]
+            #fixed_row = [InlineKeyboardButton("কিভাবে ডাউনলোড করবেন", url=REQUEST_GROUP_URL)]
+            all_buttons = [reaction_row] + custom_btns# + [fixed_row]
 
             copied_msg = await media_msg.copy(
                 chat_id=channel_id,
