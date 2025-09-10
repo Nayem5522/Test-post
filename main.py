@@ -150,7 +150,7 @@ async def start_handler(bot, msg: Message):
     ]
     await msg.reply_photo(
         photo="https://i.postimg.cc/fyrXmg6S/file-000000004e7461faaef2bd964cbbd408.png",
-        caption = (
+        caption=(
             f"👋 Hello {msg.from_user.mention},\n\n"
             "✨ Welcome to **Post Generator Prime Bot** 🤖\n\n"
             "With me, you can:\n"
@@ -161,9 +161,10 @@ async def start_handler(bot, msg: Message):
             "👍 Get reactions (Like ❤️ Love) on your posts\n\n"
             "━━━━━━━━━━━━━━━\n"
             "⚡ Use the buttons below to navigate and get started!"
-                )
+        ),
         reply_markup=InlineKeyboardMarkup(buttons)
-    )
+        )
+    
 
 # 🟢 /help command
 @app.on_message(filters.private & filters.command("help"))
