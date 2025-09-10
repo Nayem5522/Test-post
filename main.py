@@ -590,6 +590,7 @@ async def callback_handler(bot, cq: CallbackQuery):
         return
 
     # Reactions
+    # Reactions
     if data.startswith("react_"):
         _, msg_id, reaction = data.split("_")
         msg_id = int(msg_id)
@@ -607,22 +608,33 @@ async def callback_handler(bot, cq: CallbackQuery):
 
         # Add new reaction
         post["reactions"].setdefault(reaction, []).append(user_id)
-        await reactions_collection.update_one({"message_id": msg_id}, {"$set": {"reactions": post["reactions"]}})
+        await reactions_collection.update_one(
+            {"message_id": msg_id}, {"$set": {"reactions": post["reactions"]}}
+        )
 
         like_count = len(post["reactions"].get("like", []))
         love_count = len(post["reactions"].get("love", []))
 
-        # Update buttons with reaction counts
-        current_buttons = cq.message.reply_markup.inline_keyboard
-        custom_buttons = current_buttons[1:-1] if len(current_buttons) > 2 else []
+        # Preserve custom + fixed buttons without duplicating reaction row
+        current_buttons = cq.message.reply_markup.inline_keyboard if cq.message.reply_markup else []
+
+        # remove first row if it was reaction row
+        if current_buttons and all(
+            btn.callback_data and btn.callback_data.startswith("react_")
+            for btn in current_buttons[0]
+        ):
+            current_buttons = current_buttons[1:]
+
+        custom_buttons = current_buttons[:-1] if len(current_buttons) > 1 else []
         fixed_row = current_buttons[-1] if current_buttons else []
 
+        # New reaction row
         reaction_row = [
             InlineKeyboardButton(f"👍 {like_count}", callback_data=f"react_{msg_id}_like"),
             InlineKeyboardButton(f"❤️ {love_count}", callback_data=f"react_{msg_id}_love")
         ]
-        new_keyboard = [reaction_row] + custom_buttons# + [fixed_row]
 
+        new_keyboard = [reaction_row] + custom_buttons + ([fixed_row] if fixed_row else [])
         await cq.message.edit_reply_markup(reply_markup=InlineKeyboardMarkup(new_keyboard))
         await cq.answer("✅ Your reaction updated!", show_alert=False)
         return
