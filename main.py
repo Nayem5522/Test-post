@@ -178,16 +178,15 @@ async def help_command_handler(bot, msg: Message):
 # 🟢 /about callback button
 @app.on_callback_query(filters.regex("about_btn"))
 async def about_callback(bot, cq: CallbackQuery):
-    about_text = """<b>✦✗✦<a href='https://t.me/PrimeXBots'>ᴍy ᴅᴇᴛᴀɪʟꜱ ʙy ᴘʀɪᴍᴇXʙᴏᴛs</a ✦✗✦
-    
+    about_text = """<b>✦✗✦<a href='https://t.me/PrimeXBots'>ᴍy ᴅᴇᴛᴀɪʟꜱ</a ✦✗✦
 ‣ ᴍʏ ɴᴀᴍᴇ : @Post_Generator_PrimeXBot
-‣ ᴍʏ ʙᴇsᴛ ғʀɪᴇɴᴅ : <a href='tg://settings'>ᴛʜɪs ᴘᴇʀsᴏɴ</a> 
 ‣ ᴅᴇᴠᴇʟᴏᴘᴇʀ : <a href='https://t.me/Prime_Nayem'>ᴍʀ.ᴘʀɪᴍᴇ</a> 
 ‣ ᴜᴘᴅᴀᴛᴇꜱ ᴄʜᴀɴɴᴇʟ : <a href='https://t.me/PrimeXBots'>ᴘʀɪᴍᴇXʙᴏᴛꜱ</a> 
 ‣ ᴍᴀɪɴ ᴄʜᴀɴɴᴇʟ : <a href='https://t.me/PrimeCineZone'>Pʀɪᴍᴇ Cɪɴᴇᴢᴏɴᴇ</a> 
 ‣ ѕᴜᴘᴘᴏʀᴛ ɢʀᴏᴜᴘ : <a href='https://t.me/Prime_Support_group'>ᴘʀɪᴍᴇ X ѕᴜᴘᴘᴏʀᴛ</a> 
 ‣ ᴅᴀᴛᴀ ʙᴀsᴇ : <a href='https://www.mongodb.com/'>ᴍᴏɴɢᴏ ᴅʙ</a> 
 ‣ ʙᴏᴛ sᴇʀᴠᴇʀ : <a href='https://heroku.com'>ʜᴇʀᴏᴋᴜ</a> 
+‣ ᴍʏ ʙᴇsᴛ ғʀɪᴇɴᴅ : <a href='tg://settings'>ᴛʜɪs ᴘᴇʀsᴏɴ</a> 
 ‣ ʙᴜɪʟᴅ sᴛᴀᴛᴜs : ᴠ2.7.1 [sᴛᴀʙʟᴇ]></b>"""
     
     await cq.message.edit_text(
@@ -334,14 +333,14 @@ async def del_channel(bot, msg: Message):
 async def add_button(bot, msg: Message):
     if len(msg.command) < 2:
         return await msg.reply_text(
-            "⚠️ Usage: `/addbutton <text> | <url>`\n\n"
+            "⚠️ Usage: `/addbutton Your button text | Your button url`\n\n"
             "💡 Example: `/addbutton Prime Cine Zone | https://t.me/PrimeXBots`"
         )
 
     full_args = msg.text.split(" ", 1)[1]
     if "|" not in full_args:
         return await msg.reply_text(
-            "⚠️ Invalid format. Please use `/addbutton <text> | <url>`"
+            "⚠️ Invalid format. Please use `/addbutton Your button text | Your button url`"
         )
     
     parts = full_args.split("|", 1)
@@ -608,7 +607,7 @@ async def callback_handler(bot, cq: CallbackQuery):
             InlineKeyboardButton(f"👍 {like_count}", callback_data=f"react_{msg_id}_like"),
             InlineKeyboardButton(f"❤️ {love_count}", callback_data=f"react_{msg_id}_love")
         ]
-        new_keyboard = [reaction_row] + custom_buttons + [fixed_row]
+        new_keyboard = [reaction_row] + custom_buttons# + [fixed_row]
 
         await cq.message.edit_reply_markup(reply_markup=InlineKeyboardMarkup(new_keyboard))
         await cq.answer("✅ Your reaction updated!", show_alert=False)
