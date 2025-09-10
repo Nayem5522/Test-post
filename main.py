@@ -159,14 +159,14 @@ async def start_handler(bot, msg: Message):
 async def help_command_handler(bot, msg: Message):
     help_text = (
         "📚 **Help Menu**\n\n"
-        "➕ `/addchannel <id>` → Add a channel\n"
+        "➕ `/addchannel Channel id` → Add a channel\n"
         "📌 Forward a post → Save channel automatically\n"
         "📂 `/mychannels` → See saved channels\n"
         "🗑 `/delchannel` → Delete channel\n\n"
-        "✍️ `/setcap <caption>` → Set custom caption\n"
+        "✍️ `/setcap Your caption` → Set custom caption\n"
         "👀 `/seecap` → View caption\n"
         "❌ `/delcap` → Delete caption\n\n"
-        "🔘 `/addbutton <text> | <url>` → Add custom button (Note: Use `|` as separator)\n"
+        "🔘 `/addbutton text | url` → Add custom button (Note: Use `|` as separator)\n"
         "📂 `/mybuttons` → View custom buttons\n"
         "🗑 `/delbutton` → Delete a button\n"
         "♻️ `/clearbuttons` → Clear all buttons\n\n"
@@ -178,22 +178,24 @@ async def help_command_handler(bot, msg: Message):
 # 🟢 /about callback button
 @app.on_callback_query(filters.regex("about_btn"))
 async def about_callback(bot, cq: CallbackQuery):
-    about_text = """<b>✦✗✦<a href='https://t.me/PrimeXBots'>ᴍy ᴅᴇᴛᴀɪʟꜱ</a ✦✗✦
-‣ ᴍʏ ɴᴀᴍᴇ : @Post_Generator_PrimeXBot
-‣ ᴅᴇᴠᴇʟᴏᴘᴇʀ : <a href='https://t.me/Prime_Nayem'>ᴍʀ.ᴘʀɪᴍᴇ</a> 
-‣ ᴜᴘᴅᴀᴛᴇꜱ ᴄʜᴀɴɴᴇʟ : <a href='https://t.me/PrimeXBots'>ᴘʀɪᴍᴇXʙᴏᴛꜱ</a> 
-‣ ᴍᴀɪɴ ᴄʜᴀɴɴᴇʟ : <a href='https://t.me/PrimeCineZone'>Pʀɪᴍᴇ Cɪɴᴇᴢᴏɴᴇ</a> 
-‣ ѕᴜᴘᴘᴏʀᴛ ɢʀᴏᴜᴘ : <a href='https://t.me/Prime_Support_group'>ᴘʀɪᴍᴇ X ѕᴜᴘᴘᴏʀᴛ</a> 
-‣ ᴅᴀᴛᴀ ʙᴀsᴇ : <a href='https://www.mongodb.com/'>ᴍᴏɴɢᴏ ᴅʙ</a> 
-‣ ʙᴏᴛ sᴇʀᴠᴇʀ : <a href='https://heroku.com'>ʜᴇʀᴏᴋᴜ</a> 
-‣ ᴍʏ ʙᴇsᴛ ғʀɪᴇɴᴅ : <a href='tg://settings'>ᴛʜɪs ᴘᴇʀsᴏɴ</a> 
-‣ ʙᴜɪʟᴅ sᴛᴀᴛᴜs : ᴠ2.7.1 [sᴛᴀʙʟᴇ]></b>"""
+    about_text = (
+        "<b>✦✗✦ <a href='https://t.me/PrimeXBots'>ᴍy ᴅᴇᴛᴀɪʟꜱ ʙy ᴘʀɪᴍᴇXʙᴏᴛs</a> ✦✗✦</b>\n\n"
+        "‣ ᴍʏ ɴᴀᴍᴇ : @Post_Generator_PrimeXBot\n"
+        "‣ ᴍʏ ʙᴇsᴛ ғʀɪᴇɴᴅ : <a href='tg://settings'>ᴛʜɪs ᴘᴇʀsᴏɴ</a>\n"
+        "‣ ᴅᴇᴠᴇʟᴏᴘᴇʀ : <a href='https://t.me/Prime_Nayem'>ᴍʀ.ᴘʀɪᴍᴇ</a>\n"
+        "‣ ᴜᴘᴅᴀᴛᴇꜱ ᴄʜᴀɴɴᴇʟ : <a href='https://t.me/PrimeXBots'>ᴘʀɪᴍᴇXʙᴏᴛꜱ</a>\n"
+        "‣ ᴍᴀɪɴ ᴄʜᴀɴɴᴇʟ : <a href='https://t.me/PrimeCineZone'>Pʀɪᴍᴇ Cɪɴᴇᴢᴏɴᴇ</a>\n"
+        "‣ ѕᴜᴘᴘᴏʀᴛ ɢʀᴏᴜᴘ : <a href='https://t.me/Prime_Support_group'>ᴘʀɪᴍᴇ X ѕᴜᴘᴘᴏʀᴛ</a>\n"
+        "‣ ᴅᴀᴛᴀ ʙᴀsᴇ : <a href='https://www.mongodb.com/'>ᴍᴏɴɢᴏ ᴅʙ</a>\n"
+        "‣ ʙᴏᴛ sᴇʀᴠᴇʀ : <a href='https://heroku.com'>ʜᴇʀᴏᴋᴜ</a>\n"
+        "‣ ʙᴜɪʟᴅ sᴛᴀᴛᴜs : ᴠ2.7.1 [sᴛᴀʙʟᴇ]"
+    )
     
     await cq.message.edit_text(
         about_text,
         disable_web_page_preview=True,
         parse_mode=enums.ParseMode.HTML,
-        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⌫ Back", callback_data="start_menu")]]) # Added back button
+        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⌫ Back", callback_data="start_menu")]])
     )
     await cq.answer()
 
