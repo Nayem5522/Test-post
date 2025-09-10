@@ -150,7 +150,18 @@ async def start_handler(bot, msg: Message):
     ]
     await msg.reply_photo(
         photo="https://i.postimg.cc/fyrXmg6S/file-000000004e7461faaef2bd964cbbd408.png",
-        caption=f"👋 Hi {msg.from_user.mention},\nI am **Post Generator Prime Bot** 🤖\n\nUse the buttons below to navigate.",
+        caption = (
+            f"👋 Hello {msg.from_user.mention},\n\n"
+            "✨ Welcome to **Post Generator Prime Bot** 🤖\n\n"
+            "With me, you can:\n"
+            "➕ Add & manage your channels\n"
+            "✍️ Set custom captions\n"
+            "🔘 Create your own buttons\n"
+            "📤 Post photos & videos directly\n"
+            "👍 Get reactions (Like ❤️ Love) on your posts\n\n"
+            "━━━━━━━━━━━━━━━\n"
+            "⚡ Use the buttons below to navigate and get started!"
+                )
         reply_markup=InlineKeyboardMarkup(buttons)
     )
 
@@ -159,7 +170,7 @@ async def start_handler(bot, msg: Message):
 async def help_command_handler(bot, msg: Message):
     help_text = (
         "📚 **Help Menu**\n\n"
-        "➕ `/addchannel Channel id` → Add a channel\n"
+        "➕ `/addchannel Channelid` → Add a channel\n"
         "📌 Forward a post → Save channel automatically\n"
         "📂 `/mychannels` → See saved channels\n"
         "🗑 `/delchannel` → Delete channel\n\n"
@@ -204,14 +215,14 @@ async def about_callback(bot, cq: CallbackQuery):
 async def help_callback(bot, cq: CallbackQuery):
     help_text = (
         "📚 **Help Menu**\n\n"
-        "➕ `/addchannel <id>` → Add a channel\n"
+        "➕ `/addchannel channelid` → Add a channel\n"
         "📌 Forward a post → Save channel automatically\n"
         "📂 `/mychannels` → See saved channels\n"
         "🗑 `/delchannel` → Delete channel\n\n"
-        "✍️ `/setcap <caption>` → Set custom caption\n"
+        "✍️ `/setcap your caption text` → Set custom caption\n"
         "👀 `/seecap` → View caption\n"
         "❌ `/delcap` → Delete caption\n\n"
-        "🔘 `/addbutton <text> | <url>` → Add custom button (Note: Use `|` as separator)\n"
+        "🔘 `/addbutton Your button text | Your button url` → Add custom button (Note: Use `|` as separator)\n"
         "📂 `/mybuttons` → View custom buttons\n"
         "🗑 `/delbutton` → Delete a button\n"
         "♻️ `/clearbuttons` → Clear all buttons\n\n"
