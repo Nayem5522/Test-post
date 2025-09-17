@@ -423,10 +423,13 @@ async def del_cap(bot, msg: Message):
     await users.update_one({"user_id": msg.from_user.id}, {"$set": {"custom_caption": None}})
     await msg.reply_text("🗑 Custom caption deleted!")
 
+
 # 🟢 Media Handler
 @app.on_message(filters.private & (filters.photo | filters.video))
 async def media_handler(bot, msg: Message):
     user = await users.find_one({"user_id": msg.from_user.id})
+    
+    # এইটা আগের মতোই থাকবে (চ্যানেল অ্যাড করা নেই)
     if not user or not user.get("channels"):
         return await msg.reply_text("⚠️ You have no channels set. Use /addchannel first.")
     
@@ -435,19 +438,34 @@ async def media_handler(bot, msg: Message):
     
     buttons = []
     for ch in user["channels"]:
-        # Re-check bot's admin rights for each channel before offering to post
         if await ensure_bot_admin_rights(bot, ch['id']):
             buttons.append([InlineKeyboardButton(ch["title"], callback_data=f"sendto_{msg.id}_{ch['id']}")])
         else:
             logger.warning(f"Bot lacks admin rights for channel {ch['title']} ({ch['id']}). Not listing for post.")
-            # Optionally, you could add a button to prompt the user to grant rights
-            # buttons.append([InlineKeyboardButton(f"🚫 {ch['title']} (No bot admin rights)", callback_data="no_rights_info")])
     
+    # এখানে আমরা আপনার চাওয়া সুন্দর নোটিস+ছবি দেব
     if not buttons:
-        return await msg.reply_text("⚠️ No channels available where the bot has sufficient admin rights to post. Please grant 'Post Messages' and 'Edit Messages' privileges.")
-
-    await msg.reply_text("📤 Select a channel to post:", reply_markup=InlineKeyboardMarkup(buttons))
-
+        return await msg.reply_photo(
+            "https://i.postimg.cc/q7M6tQhy/IMG-20250918-053921-379.jpg",
+            caption=(
+                "⚠️ **নোটিস / Notice** ⚠️\n\n"
+                "বট আপনার চ্যানেলগুলিতে বর্তমানে অ্যাডমিন পারমিশন যাচাই করতে পারছে না।\n\n"
+                "📝 **করনীয় (বাংলা):**\n"
+                "• দয়া করে বটকে নতুন করে চ্যানেলে **অ্যাডমিন** হিসেবে যুক্ত করুন এবং *Post Messages* ও *Edit Messages* পারমিশন দিন।\n"
+                "• অথবা আপনার চ্যানেল থেকে একটি **মেসেজ ফরওয়ার্ড করে এখানে পাঠান**, যাতে আমি আবার অ্যাডমিন পারমিশন যাচাই করতে পারি।\n"
+                "• এরপর আপনার কনটেন্ট আবার পাঠালে আমি সেটি চ্যানেলে পাঠাতে সাহায্য করব। ধন্যবাদ ❤️\n\n"
+                "📝 **Steps (English):**\n"
+                "• Please re-add the bot as **Admin** in your channel with *Post Messages* and *Edit Messages* permissions.\n"
+                "• Or simply **forward a message** from your channel here so I can re-check admin permissions.\n"
+                "• After that, send your content again — I’ll help you post it to your channel. Thank you! ❤️"
+            )
+        )
+    
+    await msg.reply_text(
+        "📤 **Select a channel to post:**",
+        reply_markup=InlineKeyboardMarkup(buttons)
+    )
+    
 # 🟢 /stats
 @app.on_message(filters.private & filters.command("stats"))
 async def stats_handler(bot, msg: Message):
