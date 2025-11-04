@@ -313,9 +313,16 @@ async def post_command_handler(bot, msg: Message):
 @app.on_callback_query(filters.regex("^select_post_"))
 async def select_post_callback(bot, cq: CallbackQuery):
     try:
-        _, media_type, mid = cq.data.split("_", 2)
-        mid = int(mid)
-    except ValueError:
+        # [সমাধান] কলব্যাক ডেটা সঠিকভাবে ভাগ করা হয়েছে
+        parts = cq.data.split("_")
+        if len(parts) < 4:
+            raise ValueError("Invalid callback data format")
+        
+        media_type = parts[2]
+        mid = int(parts[3])
+        
+    except (ValueError, IndexError):
+        logger.error(f"Callback data parsing failed for: {cq.data}")
         return await cq.message.edit_text("❌ ভুল কলব্যাক ডেটা।")
 
     await cq.answer("⏳ তথ্য সংগ্রহ করা হচ্ছে...", show_alert=False)
