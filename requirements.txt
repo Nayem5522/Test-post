@@ -1,8 +1,20 @@
+# Telegram bot framework and its performance crypto layer
 pyrogram
+tgcrypto
+
+# Asynchronous driver for MongoDB
 motor
-flask
-python-dotenv
+
+# For creating the web server to keep the bot alive
+Flask
+
+# For making HTTP requests to APIs (TMDB, file downloads)
 requests
+
+# For advanced image processing (poster generation)
 Pillow
 numpy
 opencv-python-headless
+
+# For loading environment variables from a .env file
+python-dotenv
