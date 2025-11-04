@@ -462,8 +462,8 @@ async def generate_final_post_preview(bot, uid, chat_id, status_msg: Message):
     ]
     for btn in user_data.get("custom_buttons", []):
         inline_keyboard.append([InlineKeyboardButton(btn["text"], url=btn["url"])])
-    if user_data.get('tutorial_link'):
-        inline_keyboard.append([InlineKeyboardButton("🎥 How to Download", url=user_data['tutorial_link'])])
+    #if user_data.get('tutorial_link'):
+        #inline_keyboard.append([InlineKeyboardButton("🎥 How to Download", url=user_data['tutorial_link'])])
 
     await status_msg.delete()
     
@@ -535,17 +535,34 @@ async def generate_channel_caption(convo: dict, user_data: dict):
         if links.get('1080p'): movie_links.append(f"🎥 **[Download 1080p]({links['1080p']})**")
         download_links = "\n".join(movie_links)
 
+    # --- নতুন টিউটোরিয়াল সেকশন ---
+    tutorial_section = ""
+    if user_data.get('tutorial_link'):
+        tutorial_url = user_data['tutorial_link']
+        tutorial_section = (
+            "╭━❰📚 ʜᴏᴡ ᴛᴏ ᴡᴀᴛᴄʜ ᴏʀ ᴅᴏᴡɴʟᴏᴀᴅ ᴛᴜᴛᴏʀɪᴀʟ ❱━⊱\n"
+            f"┃       <a href='{tutorial_url}'>📥 𝗪𝗔𝗧𝗖𝗛 𝗧𝗨𝗧𝗢𝗥𝗜𝗔𝗟 𝗡𝗢𝗪 ▶️</a>\n"
+            "╰━━━━━━━━━━━━━━━━⊱"
+        )
+    
     custom_caption = user_data.get('custom_caption', '')
     footer = (
         "━━━━━━━━━━━━━━━━━━━━━━━\n"
         "**@YourChannel** | **@YourBot**"
     )
 
-    final_caption_parts = [caption_header]
-    if download_links: final_caption_parts.extend(["", download_section_header, download_links])
-    if custom_caption: final_caption_parts.extend(["", custom_caption])
-    final_caption_parts.extend(["", footer])
-    return "\n".join(final_caption_parts)
+    # --- চূড়ান্ত ক্যাপশন একত্রিত করা ---
+    final_parts = [caption_header]
+    if download_links:
+        final_parts.append(download_section_header + "\n" + download_links)
+    if tutorial_section:
+        final_parts.append(tutorial_section)
+    if custom_caption:
+        final_parts.append(custom_caption)
+    
+    final_parts.append(footer)
+    
+    return "\n\n".join(final_parts)
 
 async def post_to_channel(bot: Client, user_id: int, channel_id: int, status_message: Message):
     convo = user_conversations.get(user_id)
@@ -622,23 +639,34 @@ async def direct_media_post_callback(bot, cq: CallbackQuery):
         media_msg = await bot.get_messages(user_id, msg_id)
         user_data = await users_collection.find_one({"user_id": user_id}) or {}
         
-        # Combine captions
+        # --- ক্যাপশন একত্রিত করার নতুন নিয়ম ---
         caption_parts = []
-        if media_msg.caption: caption_parts.append(media_msg.caption.html)
-        if user_data.get("custom_caption"): caption_parts.append(user_data["custom_caption"])
+        if media_msg.caption:
+            caption_parts.append(media_msg.caption.html)
+        if user_data.get("custom_caption"):
+            caption_parts.append(user_data["custom_caption"])
+        
+        # টিউটোরিয়াল সেকশন যোগ করা
+        if user_data.get('tutorial_link'):
+            tutorial_url = user_data['tutorial_link']
+            tutorial_text = (
+                "╭━❰📚 ʜᴏᴡ ᴛᴏ ᴡᴀᴛᴄʜ ᴏʀ ᴅᴏᴡɴʟᴏᴀᴅ ᴛᴜᴛᴏʀɪᴀʟ ❱━⊱\n"
+                f"┃       <a href='{tutorial_url}'>📥 𝗪𝗔𝗧𝗖𝗛 𝗧𝗨𝗧𝗢𝗥𝗜𝗔𝗟 𝗡𝗢𝗪 ▶️</a>\n"
+                "╰━━━━━━━━━━━━━━━━⊱"
+            )
+            caption_parts.append(tutorial_text)
+
         caption_parts.append("✨ **Posted via @YourBot**")
         final_caption = "\n\n".join(caption_parts)
 
-        # Prepare buttons
+        # --- বাটন প্রস্তুত করা (টিউটোরিয়াল বাটন ছাড়া) ---
         all_buttons = [
             [InlineKeyboardButton("👍 0", callback_data="react_DUMMY_like"), InlineKeyboardButton("❤️ 0", callback_data="react_DUMMY_love")]
         ]
         for btn in user_data.get("custom_buttons", []):
             all_buttons.append([InlineKeyboardButton(btn["text"], url=btn["url"])])
-        if user_data.get('tutorial_link'):
-            all_buttons.append([InlineKeyboardButton("🎥 How to Download", url=user_data['tutorial_link'])])
-
-        # Post and update
+        
+        # পোস্ট এবং আপডেট
         copied_msg = await media_msg.copy(chat_id=channel_id, caption=final_caption)
         await reactions_collection.insert_one({"message_id": copied_msg.id, "chat_id": channel_id, "reactions": {"like": [], "love": []}})
         
@@ -871,26 +899,44 @@ async def button_commands(bot: Client, msg: Message):
         await users_collection.update_one({"user_id": user_id}, {"$set": {"custom_buttons": []}})
         await msg.reply_text("🗑️ All custom buttons have been deleted!")
 
-@app.on_message(filters.private & filters.command(["setwatermark", "setapi", "setdomain", "settutorial", "settings", "badge"]))
+@app.on_message(filters.private & filters.command(["setwatermark", "setapi", "setdomain", "settutorial", "deltutorial", "settings", "badge"]))
 async def settings_commands(bot: Client, msg: Message):
     command, user_id = msg.command[0].lower(), msg.from_user.id
     if len(msg.command) > 1:
         value = msg.text.split(" ", 1)[1]
-        if command == "setwatermark": await users_collection.update_one({"user_id": user_id}, {"$set": {"watermark_text": value}}, upsert=True); await msg.reply_text(f"✅ Watermark set to: `{value}`")
-        elif command == "setapi": await users_collection.update_one({"user_id": user_id}, {"$set": {"shortener_api": value}}, upsert=True); await msg.reply_text("✅ Shortener API Key has been set.")
-        elif command == "setdomain": value = value.replace("https://", "").replace("http://", ""); await users_collection.update_one({"user_id": user_id}, {"$set": {"shortener_url": value}}, upsert=True); await msg.reply_text(f"✅ Shortener domain set to: `{value}`")
-        elif command == "settutorial": await users_collection.update_one({"user_id": user_id}, {"$set": {"tutorial_link": value}}, upsert=True); await msg.reply_text("✅ Tutorial link has been set.")
-        elif command == "badge": user_conversations.setdefault(user_id, {})['temp_badge_text'] = value; await msg.reply_text(f"✅ Badge for the next post set to: `{value}`. This is a one-time setting.")
+        if command == "setwatermark":
+            await users_collection.update_one({"user_id": user_id}, {"$set": {"watermark_text": value}}, upsert=True)
+            await msg.reply_text(f"✅ Watermark set to: `{value}`")
+        elif command == "setapi":
+            await users_collection.update_one({"user_id": user_id}, {"$set": {"shortener_api": value}}, upsert=True)
+            await msg.reply_text("✅ Shortener API Key has been set.")
+        elif command == "setdomain":
+            value = value.replace("https://", "").replace("http://", "")
+            await users_collection.update_one({"user_id": user_id}, {"$set": {"shortener_url": value}}, upsert=True)
+            await msg.reply_text(f"✅ Shortener domain set to: `{value}`")
+        elif command == "settutorial":
+            await users_collection.update_one({"user_id": user_id}, {"$set": {"tutorial_link": value}}, upsert=True)
+            await msg.reply_text("✅ Tutorial link has been set.")
+        elif command == "badge":
+            user_conversations.setdefault(user_id, {})['temp_badge_text'] = value
+            await msg.reply_text(f"✅ Badge for the next post set to: `{value}`. This is a one-time setting.")
     else:
         if command == "settings":
-            # Mock a callback query to reuse the navigation handler
             mock_cq = type("Mock", (), {"data": "settings_menu", "from_user": msg.from_user, "message": msg, "answer": lambda: asyncio.sleep(0)})
             await navigation_handler(bot, mock_cq)
             return
-        elif command == "setwatermark": await users_collection.update_one({"user_id": user_id}, {"$unset": {"watermark_text": ""}}); await msg.reply_text("🗑️ Watermark removed.")
-        elif command == "badge": user_conversations.get(user_id, {}).pop('temp_badge_text', None); await msg.reply_text("🗑️ One-time badge text removed.")
-        else: await msg.reply_text("⚠️ A value is required for this command.")
-
+        elif command == "setwatermark":
+            await users_collection.update_one({"user_id": user_id}, {"$unset": {"watermark_text": ""}})
+            await msg.reply_text("🗑️ Watermark removed.")
+        elif command == "badge":
+            user_conversations.get(user_id, {}).pop('temp_badge_text', None)
+            await msg.reply_text("🗑️ One-time badge text removed.")
+        elif command == "deltutorial": # নতুন ডিলিট অপশন
+            await users_collection.update_one({"user_id": user_id}, {"$unset": {"tutorial_link": ""}})
+            await msg.reply_text("🗑️ Tutorial link has been deleted!")
+        else:
+            await msg.reply_text("⚠️ A value is required for this command.")
+            
 @app.on_message(filters.private & filters.command(["stats", "broadcast"]) & filters.user(OWNER_ID))
 async def owner_commands(bot: Client, msg: Message):
     if msg.command[0].lower() == "stats":
