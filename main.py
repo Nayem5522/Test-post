@@ -184,7 +184,7 @@ async def start_handler(bot, msg: Message):
         except Exception as e: logger.error(f"Could not get invite link for {AUTH_CHANNEL}: {e}"); await msg.reply_text("Could not get channel link. Contact owner.")
         return
     buttons = [[InlineKeyboardButton("📝 Generate Post", callback_data="generate_post_help"), InlineKeyboardButton("⚙️ Settings", callback_data="settings_menu")], [InlineKeyboardButton("📚 Help", callback_data="help_menu"), InlineKeyboardButton("ℹ️ About", callback_data="about_menu")], [InlineKeyboardButton("👑 Creator", url="https://t.me/Prime_Nayem")]]
-    await msg.reply_photo("https://i.postimg.cc/fyrXmg6S/file-000000004e7461faaef2bd964cbbd408.png", caption=(f"👋 Hello {msg.from_user.mention},\n\nWelcome to **Post Generator Prime Bot** 🤖."), reply_markup=InlineKeyboardMarkup(buttons))
+    await msg.reply_photo("https://i.postimg.cc/gjNQNCGK/IMG-20251104-062650-153.jpg", caption=(f"👋 Hello {msg.from_user.mention},\n\nWelcome to **Post Generator Prime Bot** 🤖."), reply_markup=InlineKeyboardMarkup(buttons))
 
 @app.on_message(filters.private & filters.command("help"))
 async def help_command_handler(bot, msg: Message):
