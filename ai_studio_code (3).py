@@ -208,7 +208,7 @@ async def start_handler(bot, msg: Message):
         [InlineKeyboardButton("📚 Help", callback_data="help_menu"), InlineKeyboardButton("ℹ️ About", callback_data="about_menu")],
         [InlineKeyboardButton("👑 Creator", url="https://t.me/Prime_Nayem")]
     ]
-    await msg.reply_photo("https://i.postimg.cc/fyrXmg6S/file-000000004e7461faaef2bd964cbbd408.png", caption=(f"👋 Hello {msg.from_user.mention},\n\nWelcome to **Post Generator Prime Bot** 🤖."), reply_markup=InlineKeyboardMarkup(main_menu_buttons))
+    await msg.reply_photo("https://i.postimg.cc/gjNQNCGK/IMG-20251104-062650-153.jpg", caption=(f"👋 Hello {msg.from_user.mention},\n\nWelcome to **Post Generator Prime Bot** 🤖."), reply_markup=InlineKeyboardMarkup(main_menu_buttons))
 
 @app.on_message(filters.private & filters.command("help"))
 async def help_command_handler(bot, msg: Message):
