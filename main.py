@@ -792,6 +792,35 @@ async def channel_management(bot: Client, msg: Message):
         buttons = [[InlineKeyboardButton(f"❌ {ch['title']}", callback_data=f"delch_{ch['id']}")] for ch in user["channels"]]
         await msg.reply_text("🗑️ মুছে ফেলার জন্য একটি চ্যানেল বেছে নিন:", reply_markup=InlineKeyboardMarkup(buttons))
 
+# ---------------------------------------------------------------------------
+# 🔹 Auto Add Channel on Forward (Re-integrated Feature)
+# ---------------------------------------------------------------------------
+@app.on_message(filters.private & filters.forwarded)
+async def forward_handler(bot, msg: Message):
+    if not msg.forward_from_chat:
+        # This is not a forward from a channel/group, ignore it.
+        return
+    
+    channel = msg.forward_from_chat
+    # We only care about forwards from channels
+    if channel.type != enums.ChatType.CHANNEL:
+        return
+
+    try:
+        # The save_channel function already checks for bot's admin rights
+        saved = await save_channel(msg.from_user.id, channel.id, channel.title)
+        if saved:
+            await msg.reply_text(f"✅ চ্যানেল **{channel.title}** সফলভাবে যোগ করা হয়েছে!")
+        else:
+            await msg.reply_text("⚠️ এই চ্যানেলটি আপনার তালিকায় আগে থেকেই আছে।")
+            
+    except ValueError as e:
+        # This error is raised from save_channel if bot is not admin
+        await msg.reply_text(f"❌ চ্যানেল যোগ করতে সমস্যা: {e}")
+    except Exception as e:
+        logger.error(f"Error saving forwarded channel {channel.id} for user {msg.from_user.id}: {e}")
+        await msg.reply_text("❌ একটি অপ্রত্যাশিত ত্রুটি ঘটেছে। অনুগ্রহ করে আবার চেষ্টা করুন।")
+
 @app.on_message(filters.private & filters.command(["setcap", "delcap", "seecap"]))
 async def caption_commands(bot: Client, msg: Message):
     command, user_id = msg.command[0].lower(), msg.from_user.id
