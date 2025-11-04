@@ -1,5 +1,8 @@
-pyrogram==2.0.106
-tgcrypto
+pyrogram
 motor
-pymongo
 flask
+python-dotenv
+requests
+Pillow
+numpy
+opencv-python-headless
