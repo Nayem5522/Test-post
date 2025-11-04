@@ -306,7 +306,7 @@ async def start_handler(bot, msg: Message):
         [InlineKeyboardButton("👨‍💻 ডেভেলপার", url="https://t.me/Prime_Nayem")]
     ]
     await msg.reply_photo(
-        photo="https://i.postimg.cc/fyrXmg6S/file-000000004e7461faaef2bd964cbbd408.png",
+        photo="https://i.postimg.cc/gjNQNCGK/IMG-20251104-062650-153.jpg",
         caption=(
             f"👋 স্বাগতম, {msg.from_user.mention}!\n\n"
             "আমি একটি অ্যাডভান্সড পোস্ট জেনারেটর বট। আমার মাধ্যমে আপনি মুভি ও সিরিজের জন্য আকর্ষণীয় পোস্ট তৈরি করতে পারবেন।\n\n"
@@ -659,11 +659,390 @@ async def reaction_handler(bot, cq: CallbackQuery):
 # ---------------------------------------------------------------------------
 # 🔹 সেটিংস এবং অন্যান্য কমান্ড (Settings & Other Commands)
 # ---------------------------------------------------------------------------
-# (এই অংশটি আপনার 'আমার বর্তমান' ফাইল থেকে নেওয়া হয়েছে এবং সামান্য উন্নত করা হয়েছে)
-# এখানে চ্যানেল ম্যানেজমেন্ট, কাস্টম বাটন/ক্যাপশন এবং মালিকের কমান্ডগুলো থাকবে।
-# ... (এই কোডগুলো অনেক বড় হওয়ায় এখানে সংক্ষিপ্ত করা হলো, কিন্তু সম্পূর্ণ কোডে অন্তর্ভুক্ত থাকবে)
-# (For brevity, the detailed code for settings is omitted here but is in the full script below this explanation)
 
+# --- মেনু এবং নেভিগেশন ---
+@app.on_callback_query(filters.regex("^(settings_menu|help_menu|start_menu|create_post_help)$"))
+async def navigation_handler(bot, cq: CallbackQuery):
+    data = cq.data
+    
+    if data == "start_menu":
+        # /start কমান্ডের মত একই মেনু দেখানো হবে
+        buttons = [
+            [InlineKeyboardButton("🎬 পোস্ট তৈরি করুন", callback_data="create_post_help")],
+            [InlineKeyboardButton("⚙️ সেটিংস", callback_data="settings_menu"), InlineKeyboardButton("📚 সাহায্য", callback_data="help_menu")],
+            [InlineKeyboardButton("👨‍💻 ডেভেলপার", url="https://t.me/Prime_Nayem")]
+        ]
+        await cq.message.edit_caption(
+            caption=f"👋 স্বাগতম, {cq.from_user.mention}! কিভাবে সাহায্য করতে পারি?",
+            reply_markup=InlineKeyboardMarkup(buttons)
+        )
+    
+    elif data == "help_menu" or data == "create_post_help":
+        help_text = (
+            "📚 **সাহায্য মেনু**\n\n"
+            "**পোস্ট তৈরি:**\n"
+            "🔹 `/post <নাম>` - মুভি বা সিরিজের জন্য পোস্ট তৈরি করুন।\n"
+            "   ഉദാഹരണം: `/post Avatar 2009`\n\n"
+            "**চ্যানেল ম্যানেজমেন্ট:**\n"
+            "🔹 `/addchannel <ID>` - পোস্ট করার জন্য চ্যানেল যোগ করুন।\n"
+            "🔹 `/delchannel <ID>` - চ্যানেল মুছে ফেলুন।\n"
+            "   `/mychannels` - আপনার সেভ করা চ্যানেলগুলো দেখুন।\n\n"
+            "**কাস্টমাইজেশন:**\n"
+            "🔹 `/setcap <ক্যাপশন>` - পোস্টের জন্য কাস্টম ক্যাপশন সেট করুন।\n"
+            "🔹 `/delcap` - কাস্টম ক্যাপশন মুছুন।\n"
+            "🔹 `/addbutton <নাম | লিংক>` - কাস্টম বাটন যোগ করুন।\n"
+            "🔹 `/clearbuttons` - সব কাস্টম বাটন মুছে ফেলুন।\n"
+            "🔹 `/setwatermark <নাম>` - পোস্টারে ওয়াটারমার্ক দিন।\n\n"
+            "**লিংক শর্টনার:**\n"
+            "🔹 `/setapi <API Key>` - আপনার শর্টনার API Key সেট করুন।\n"
+            "🔹 `/setdomain <ডোমেইন>` - আপনার শর্টনার ডোমেইন সেট করুন।\n"
+            "🔹 `/settutorial <লিংক>` - ডাউনলোড টিউটোরিয়াল লিংক সেট করুন।"
+        )
+        await cq.message.edit_caption(
+            caption=help_text,
+            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⌫ পিছনে", callback_data="start_menu")]])
+        )
+
+    elif data == "settings_menu":
+        user_data = await users_collection.find_one({'user_id': cq.from_user.id}) or {}
+        
+        watermark = user_data.get('watermark_text', 'সেট করা নেই')
+        api = user_data.get('shortener_api', 'সেট করা নেই')
+        domain = user_data.get('shortener_url', 'সেট করা নেই')
+        tutorial = user_data.get('tutorial_link', 'সেট করা নেই')
+
+        settings_text = (
+            "⚙️ **আপনার বর্তমান সেটিংস:**\n\n"
+            f"💧 **ওয়াটারমার্ক:** `{watermark}`\n"
+            f"🔗 **শর্টনার API:** `{api}`\n"
+            f"🌐 **শর্টনার ডোমেইন:** `{domain}`\n"
+            f"🎥 **টিউটোরিয়াল লিংক:** `{tutorial}`\n\n"
+            "কমান্ড ব্যবহার করে এগুলো পরিবর্তন করতে পারেন।"
+        )
+        await cq.message.edit_caption(
+            caption=settings_text,
+            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⌫ পিছনে", callback_data="start_menu")]])
+        )
+    await cq.answer()
+
+# ---------------------------------------------------------------------------
+# 🔹 সেটিংস এবং অন্যান্য কমান্ড (Settings & Other Commands) - সম্পূর্ণ সংস্করণ
+# ---------------------------------------------------------------------------
+
+# --- চ্যানেল ম্যানেজমেন্ট কমান্ড ---
+@app.on_message(filters.private & filters.command(["addchannel", "delchannel", "mychannels"]))
+async def channel_management(bot: Client, msg: Message):
+    command = msg.command[0].lower()
+    user_id = msg.from_user.id
+
+    if command == "addchannel":
+        if len(msg.command) < 2:
+            return await msg.reply_text("⚠️ **ব্যবহার:** `/addchannel [চ্যানেল আইডি]`\n**উদাহরণ:** `/addchannel -1001234567890`")
+        
+        try:
+            channel_id = int(msg.command[1])
+            if not str(channel_id).startswith("-100"):
+                return await msg.reply_text("❌ ভুল আইডি। চ্যানেল আইডি অবশ্যই `-100` দিয়ে শুরু হতে হবে।")
+        except ValueError:
+            return await msg.reply_text("⚠️ ইনভ্যালিড চ্যানেল আইডি। দয়া করে একটি সাংখ্যিক আইডি দিন।")
+
+        try:
+            chat = await bot.get_chat(channel_id)
+            if chat.type != enums.ChatType.CHANNEL:
+                return await msg.reply_text("⚠️ এই আইডিটি কোনো চ্যানেলের নয়।")
+        except Exception as e:
+            logger.error(f"Error getting chat for {channel_id}: {e}")
+            return await msg.reply_text(f"❌ চ্যানেল খুঁজে পাওয়া যায়নি। বটটি কি চ্যানেলে যুক্ত এবং অ্যাডমিন আছে?")
+
+        try:
+            saved = await save_channel(user_id, channel_id, chat.title)
+            if saved:
+                await msg.reply_text(f"✅ **{chat.title}** চ্যানেলটি সফলভাবে যোগ করা হয়েছে!")
+            else:
+                await msg.reply_text("⚠️ এই চ্যানেলটি আপনার তালিকায় আগে থেকেই আছে।")
+        except ValueError as e:
+            await msg.reply_text(f"❌ চ্যানেল যোগ করতে সমস্যা: {e}")
+        except Exception as e:
+            logger.error(f"Error saving channel {channel_id} for user {user_id}: {e}")
+            await msg.reply_text("❌ একটি অপ্রত্যাশিত ত্রুটি ঘটেছে।")
+
+    elif command == "mychannels":
+        user = await users_collection.find_one({"user_id": user_id})
+        if not user or not user.get("channels"):
+            return await msg.reply_text("📂 আপনার কোনো চ্যানেল সেভ করা নেই।")
+        
+        text = "📂 **আপনার সেভ করা চ্যানেলসমূহ:**\n\n"
+        for ch in user["channels"]:
+            text += f"🔹 **{ch['title']}** (`{ch['id']}`)\n"
+        await msg.reply_text(text)
+
+    elif command == "delchannel":
+        user = await users_collection.find_one({"user_id": user_id})
+        if not user or not user.get("channels"):
+            return await msg.reply_text("📂 আপনার মুছে ফেলার মতো কোনো চ্যানেল নেই।")
+        
+        buttons = [[InlineKeyboardButton(f"❌ {ch['title']}", callback_data=f"delch_{ch['id']}")] for ch in user["channels"]]
+        await msg.reply_text("🗑️ মুছে ফেলার জন্য একটি চ্যানেল বেছে নিন:", reply_markup=InlineKeyboardMarkup(buttons))
+
+# --- কাস্টম ক্যাপশন কমান্ড ---
+@app.on_message(filters.private & filters.command(["setcap", "delcap", "seecap"]))
+async def caption_commands(bot: Client, msg: Message):
+    command = msg.command[0].lower()
+    user_id = msg.from_user.id
+
+    if command == "setcap":
+        if msg.reply_to_message:
+            caption = msg.reply_to_message.text or msg.reply_to_message.caption
+        elif len(msg.command) > 1:
+            caption = msg.text.split(" ", 1)[1]
+        else:
+            return await msg.reply_text("⚠️ **ব্যবহার:** `/setcap [আপনার ক্যাপশন]`\nঅথবা কোনো মেসেজে রিপ্লাই করে `/setcap` লিখুন।")
+        
+        await users_collection.update_one({"user_id": user_id}, {"$set": {"custom_caption": caption}}, upsert=True)
+        await msg.reply_text("✅ কাস্টম ক্যাপশন সফলভাবে সেট করা হয়েছে!")
+
+    elif command == "seecap":
+        user = await users_collection.find_one({"user_id": user_id})
+        if not user or not user.get("custom_caption"):
+            return await msg.reply_text("⚠️ আপনার কোনো কাস্টম ক্যাপশন সেট করা নেই।")
+        await msg.reply_text(f"📝 **আপনার বর্তমান ক্যাপশন:**\n\n{user['custom_caption']}")
+
+    elif command == "delcap":
+        await users_collection.update_one({"user_id": user_id}, {"$unset": {"custom_caption": ""}})
+        await msg.reply_text("🗑️ কাস্টম ক্যাপশন মুছে ফেলা হয়েছে!")
+
+# --- কাস্টম বাটন কমান্ড ---
+@app.on_message(filters.private & filters.command(["addbutton", "delbutton", "mybuttons", "clearbuttons"]))
+async def button_commands(bot: Client, msg: Message):
+    command = msg.command[0].lower()
+    user_id = msg.from_user.id
+
+    if command == "addbutton":
+        if len(msg.command) < 2:
+            return await msg.reply_text("⚠️ **ব্যবহার:** `/addbutton বাটন টেক্সট | http://your-link.com`\nদয়া করে টেক্সট এবং লিংকের মাঝে `|` চিহ্ন ব্যবহার করুন।")
+
+        full_args = msg.text.split(" ", 1)[1]
+        if "|" not in full_args:
+            return await msg.reply_text("⚠️ ভুল ফরম্যাট। দয়া করে টেক্সট এবং লিংকের মাঝে `|` ব্যবহার করুন।")
+        
+        try:
+            text, url = [part.strip() for part in full_args.split("|", 1)]
+            if not text or not url.startswith(('http://', 'https://')):
+                raise ValueError
+        except ValueError:
+            return await msg.reply_text("⚠️ ভুল ফরম্যাট। বাটন টেক্সট এবং একটি সঠিক URL দিন।")
+
+        await users_collection.update_one(
+            {"user_id": user_id},
+            {"$push": {"custom_buttons": {"text": text, "url": url}}},
+            upsert=True
+        )
+        await msg.reply_text(f"✅ **{text}** বাটনটি সফলভাবে যোগ করা হয়েছে!")
+    
+    elif command == "mybuttons":
+        user = await users_collection.find_one({"user_id": user_id})
+        if not user or not user.get("custom_buttons"):
+            return await msg.reply_text("📂 আপনার কোনো কাস্টম বাটন নেই।")
+        
+        buttons = [[InlineKeyboardButton(b["text"], url=b["url"])] for b in user["custom_buttons"]]
+        await msg.reply_text("📂 **আপনার কাস্টম বাটনসমূহ:**", reply_markup=InlineKeyboardMarkup(buttons))
+
+    elif command == "delbutton":
+        user = await users_collection.find_one({"user_id": user_id})
+        if not user or not user.get("custom_buttons"):
+            return await msg.reply_text("📂 আপনার মুছে ফেলার মতো কোনো বাটন নেই।")
+        
+        buttons = [[InlineKeyboardButton(f"❌ {b['text']}", callback_data=f"delbtn_{b['text']}")] for b in user["custom_buttons"]]
+        await msg.reply_text("🗑️ মুছে ফেলার জন্য একটি বাটন বেছে নিন:", reply_markup=InlineKeyboardMarkup(buttons))
+
+    elif command == "clearbuttons":
+        await users_collection.update_one({"user_id": user_id}, {"$set": {"custom_buttons": []}})
+        await msg.reply_text("🗑️ আপনার সব কাস্টম বাটন মুছে ফেলা হয়েছে!")
+
+# --- মালিকের কমান্ড ---
+@app.on_message(filters.private & filters.command(["stats", "broadcast"]) & filters.user(OWNER_ID))
+async def owner_commands(bot: Client, msg: Message):
+    command = msg.command[0].lower()
+
+    if command == "stats":
+        total_users = await users_collection.count_documents({})
+        pipeline = [{"$project": {"channel_count": {"$size": {"$ifNull": ["$channels", []]}}}}]
+        total_channels = sum(doc["channel_count"] async for doc in users_collection.aggregate(pipeline))
+        
+        await msg.reply_text(
+            f"📊 **বটের পরিসংখ্যান:**\n\n"
+            f"👤 **মোট ব্যবহারকারী:** {total_users}\n"
+            f"📂 **মোট সেভ করা চ্যানেল:** {total_channels}"
+        )
+
+    elif command == "broadcast":
+        if not msg.reply_to_message:
+            return await msg.reply_text("⚠️ ব্রডকাস্ট করার জন্য দয়া করে একটি মেসেজে রিপ্লাই করুন।")
+
+        sent_count = 0
+        failed_count = 0
+        
+        status_msg = await msg.reply_text("📢 ব্রডকাস্ট শুরু হচ্ছে...")
+        user_ids = users_collection.distinct("user_id")
+        
+        async for user_id in user_ids:
+            try:
+                await msg.reply_to_message.copy(user_id)
+                sent_count += 1
+            except Exception:
+                failed_count += 1
+        
+        await status_msg.edit_text(
+            f"✅ **ব্রডকাস্ট সম্পন্ন!**\n\n"
+            f"📤 **সফলভাবে পাঠানো হয়েছে:** {sent_count} জন ব্যবহারকারীকে।\n"
+            f"❌ **পাঠাতে ব্যর্থ হয়েছে:** {failed_count} জন ব্যবহারকারীকে।"
+        )
+
+# --- বাটন এবং চ্যানেল ডিলিট করার জন্য কলব্যাক হ্যান্ডলার ---
+@app.on_callback_query(filters.regex("^(delch_|delbtn_)"))
+async def delete_callback_handler(bot: Client, cq: CallbackQuery):
+    user_id = cq.from_user.id
+    data = cq.data
+
+    if data.startswith("delch_"):
+        ch_id = int(data.split("_")[1])
+        await users_collection.update_one(
+            {"user_id": user_id},
+            {"$pull": {"channels": {"id": ch_id}}}
+        )
+        await cq.answer("🗑️ চ্যানেল মুছে ফেলা হয়েছে!", show_alert=True)
+        # মেসেজটি এডিট করে বাটনগুলো রিফ্রেশ করা
+        user = await users_collection.find_one({"user_id": user_id})
+        if user and user.get("channels"):
+            buttons = [[InlineKeyboardButton(f"❌ {ch['title']}", callback_data=f"delch_{ch['id']}")] for ch in user["channels"]]
+            await cq.message.edit_reply_markup(reply_markup=InlineKeyboardMarkup(buttons))
+        else:
+            await cq.message.edit_text("📂 আপনার আর কোনো চ্যানেল সেভ করা নেই।")
+
+    elif data.startswith("delbtn_"):
+        text_to_delete = data.split("_", 1)[1]
+        await users_collection.update_one(
+            {"user_id": user_id},
+            {"$pull": {"custom_buttons": {"text": text_to_delete}}}
+        )
+        await cq.answer(f"🗑️ '{text_to_delete}' বাটনটি মুছে ফেলা হয়েছে!", show_alert=True)
+        # মেসেজটি এডিট করে বাটনগুলো রিফ্রেশ করা
+        user = await users_collection.find_one({"user_id": user_id})
+        if user and user.get("custom_buttons"):
+            buttons = [[InlineKeyboardButton(f"❌ {b['text']}", callback_data=f"delbtn_{b['text']}")] for b in user["custom_buttons"]]
+            await cq.message.edit_reply_markup(reply_markup=InlineKeyboardMarkup(buttons))
+        else:
+            await cq.message.edit_text("📂 আপনার আর কোনো কাস্টম বাটন নেই।")
+
+
+# ---------------------------------------------------------------------------
+# 🔹 কাস্টমাইজেশন এবং সেটিংস কমান্ড (Customization & Settings Commands)
+# ---------------------------------------------------------------------------
+
+@app.on_message(filters.private & filters.command(["setwatermark", "setapi", "setdomain", "settutorial", "settings", "badge"]))
+async def settings_commands(bot: Client, msg: Message):
+    command = msg.command[0].lower()
+    user_id = msg.from_user.id
+
+    # --- /setwatermark ---
+    if command == "setwatermark":
+        if len(msg.command) > 1:
+            watermark_text = msg.text.split(" ", 1)[1]
+            await users_collection.update_one(
+                {"user_id": user_id},
+                {"$set": {"watermark_text": watermark_text}},
+                upsert=True
+            )
+            await msg.reply_text(f"✅ ওয়াটারমার্ক সফলভাবে সেট করা হয়েছে: `{watermark_text}`")
+        else:
+            # ওয়াটারমার্ক মুছে ফেলার জন্য
+            await users_collection.update_one(
+                {"user_id": user_id},
+                {"$unset": {"watermark_text": ""}}
+            )
+            await msg.reply_text("🗑️ ওয়াটারমার্ক মুছে ফেলা হয়েছে।")
+
+    # --- /setapi ---
+    elif command == "setapi":
+        if len(msg.command) > 1:
+            api_key = msg.command[1]
+            await users_collection.update_one(
+                {"user_id": user_id},
+                {"$set": {"shortener_api": api_key}},
+                upsert=True
+            )
+            await msg.reply_text(f"✅ শর্টনার API Key সফলভাবে সেট করা হয়েছে।")
+        else:
+            await msg.reply_text("⚠️ **ব্যবহার:** `/setapi [আপনার API Key]`")
+
+    # --- /setdomain ---
+    elif command == "setdomain":
+        if len(msg.command) > 1:
+            domain = msg.command[1].replace("https://", "").replace("http://", "") # http(s):// ছাড়া সেভ করা ভালো
+            await users_collection.update_one(
+                {"user_id": user_id},
+                {"$set": {"shortener_url": domain}},
+                upsert=True
+            )
+            await msg.reply_text(f"✅ শর্টনার ডোমেইন সফলভাবে সেট করা হয়েছে: `{domain}`")
+        else:
+            await msg.reply_text("⚠️ **ব্যবহার:** `/setdomain [yourdomain.com]`")
+
+    # --- /settutorial ---
+    elif command == "settutorial":
+        if len(msg.command) > 1:
+            tutorial_link = msg.command[1]
+            if not tutorial_link.startswith(('http://', 'https://')):
+                return await msg.reply_text("⚠️ দয়া করে একটি সঠিক লিংক দিন।")
+            
+            await users_collection.update_one(
+                {"user_id": user_id},
+                {"$set": {"tutorial_link": tutorial_link}},
+                upsert=True
+            )
+            await msg.reply_text(f"✅ টিউটোরিয়াল লিংক সফলভাবে সেট করা হয়েছে।")
+        else:
+             # টিউটোরিয়াল লিংক মুছে ফেলার জন্য
+            await users_collection.update_one(
+                {"user_id": user_id},
+                {"$unset": {"tutorial_link": ""}}
+            )
+            await msg.reply_text("🗑️ টিউটোরিয়াল লিংক মুছে ফেলা হয়েছে।")
+
+    # --- /settings ---
+    elif command == "settings":
+        user_data = await users_collection.find_one({'user_id': user_id}) or {}
+        
+        watermark = user_data.get('watermark_text', 'সেট করা নেই')
+        api = "******" + user_data.get('shortener_api', ' ')[-4:] if user_data.get('shortener_api') else 'সেট করা নেই'
+        domain = user_data.get('shortener_url', 'সেট করা নেই')
+        tutorial = user_data.get('tutorial_link', 'সেট করা নেই')
+
+        settings_text = (
+            "⚙️ **আপনার বর্তমান সেটিংস:**\n\n"
+            f"💧 **ওয়াটারমার্ক:** `{watermark}`\n"
+            f"🔗 **শর্টনার API:** `{api}`\n"
+            f"🌐 **শর্টনার ডোমেইন:** `{domain}`\n"
+            f"🎥 **টিউটোরিয়াল লিংক:** `{tutorial}`\n\n"
+            "উপরের কমান্ডগুলো ব্যবহার করে এই সেটিংস পরিবর্তন করতে পারেন।"
+        )
+        await msg.reply_text(settings_text)
+
+    # --- /badge ---
+    # এই কমান্ডটি পরবর্তী পোস্টের জন্য একটি অস্থায়ী ব্যাজ টেক্সট সেট করে
+    elif command == "badge":
+        if len(msg.command) > 1:
+            badge_text = msg.text.split(" ", 1)[1]
+            if user_id not in user_conversations:
+                user_conversations[user_id] = {}
+            user_conversations[user_id]['temp_badge_text'] = badge_text
+            await msg.reply_text(f"✅ ব্যাজ টেক্সট সেট করা হয়েছে: `{badge_text}`\n\n"
+                                 "এই ব্যাজটি শুধুমাত্র আপনার পরবর্তী `/post` কমান্ডের জন্য পোস্টারে দেখানো হবে।")
+        else:
+            if user_id in user_conversations and 'temp_badge_text' in user_conversations[user_id]:
+                del user_conversations[user_id]['temp_badge_text']
+            await msg.reply_text("🗑️ অস্থায়ী ব্যাজ টেক্সট মুছে ফেলা হয়েছে।")
+            
 # ---------------------------------------------------------------------------
 # 🔹 বট চালু করুন (Run The Bot)
 # ---------------------------------------------------------------------------
