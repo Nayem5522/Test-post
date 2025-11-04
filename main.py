@@ -476,33 +476,52 @@ async def generate_channel_caption(convo: dict, user_data: dict):
         "genres": ", ".join([g["name"] for g in data.get("genres", [])[:3]]) or "N/A",
         "rating": f"{data.get('vote_average', 0):.1f}",
         "language": convo.get('language', 'N/A'),
-        "runtime": format_runtime(data.get("runtime") if not is_tv else (data.get("episode_run_time") or [0])[0]),
+        "runtime": format_runtime(
+            data.get("runtime") if not is_tv else (data.get("episode_run_time") or [0])[0]
+        ),
     }
 
-    caption_header = f"🎬 **{info['title']} ({info['year']})**\n━━━━━━━━━━━━━━━━━━━━━━━\n⭐ **Rating:** {info['rating']}/10\n🎭 **Genre:** {info['genres']}\n🔊 **Language:** {info['language']}\n⏰ **Runtime:** {info['runtime']}\n━━━━━━━━━━━━━━━━━━━━━━━"
-    download_section_header = "📥 **ডাউনলোড লিংক** 📥"
-    
+    caption_header = (
+        f"╔══🎬 **{info['title']} ({info['year']})** ══╗\n"
+        f"⭐ **IMDb:** `{info['rating']}/10`\n"
+        f"🎭 **Genre:** `{info['genres']}`\n"
+        f"🈳 **Language:** `{info['language']}`\n"
+        f"⏰ **Runtime:** `{info['runtime']}`\n"
+        f"╚══════════════════════════╝\n"
+        f"🍿 *Lights. Camera. Action!* 🎞️"
+    )
+
+    download_section_header = "📦 **Choose Your Quality & Download** 📦"
     download_links = ""
+
     if is_tv:
-        sorted_seasons = sorted(links.keys(), key=lambda x: int(re.search(r'\d+', str(x)).group()))
+        sorted_seasons = sorted(
+            links.keys(), key=lambda x: int(re.search(r'\d+', str(x)).group())
+        )
         season_links = [f"✅ **[Download Season {s}]({links[s]})**" for s in sorted_seasons]
         download_links = "\n".join(season_links)
     else:
         movie_links = []
-        if links.get('480p'): movie_links.append(f"**[Download 480p]({links['480p']})**")
-        if links.get('720p'): movie_links.append(f"**[Download 720p]({links['720p']})**")
-        if links.get('1080p'): movie_links.append(f"**[Download 1080p]({links['1080p']})**")
+        if links.get('480p'): movie_links.append(f"🎞️ **[Download 480p]({links['480p']})**")
+        if links.get('720p'): movie_links.append(f"📺 **[Download 720p]({links['720p']})**")
+        if links.get('1080p'): movie_links.append(f"🎥 **[Download 1080p]({links['1080p']})**")
         download_links = "\n".join(movie_links)
 
     custom_caption = user_data.get('custom_caption', '')
-    
+
+    footer = (
+        "\n━━━━━━━━━━━━━━━━━━━━━━━\n"
+        "⚡ **Stream • Download • Enjoy**\n"
+        "🎬 Uploaded by: **@PrimeCineZone**\n"
+        "🤖 Auto Generated via: **@Post_Generator_PrimeXBot**"
+    )
+
     final_caption_parts = [caption_header]
     if download_links:
         final_caption_parts.extend([download_section_header, download_links])
     if custom_caption:
         final_caption_parts.append(custom_caption)
-        
-    final_caption_parts.append("✨ **পোস্ট করেছেন:** @Post_Generator_PrimeXBot")
+    final_caption_parts.append(footer)
 
     return "\n\n".join(final_caption_parts)
 
