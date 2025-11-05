@@ -818,10 +818,12 @@ async def navigation_handler(bot, cq: CallbackQuery):
             "🔹 `/deltutorial`: Remove the tutorial link from your posts.\n"
             "🔹 `/settings`: View a summary of your current settings."
         )
-        await cq.message.edit_caption(
-            caption=help_text,
+        # --- মূল পরিবর্তনটি এখানে ---
+        # আমরা edit_caption এর পরিবর্তে edit_text ব্যবহার করছি
+        await cq.message.edit_text(
+            text=help_text,
             reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⌫ Back", callback_data="start_menu")]])
-    )
+)
     elif data == "settings_menu":
         user_data = await users_collection.find_one({'user_id': uid}) or {}
         watermark = user_data.get('watermark_text', 'Not Set')
