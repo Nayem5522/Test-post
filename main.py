@@ -432,39 +432,47 @@ async def select_post_callback(bot, cq: CallbackQuery):
         f"💬 Enter the language for the post (e.g., Bengali, Hindi), or type **skip** to use the default (`{details.get('original_language')}`)."
     )
 
+# ========================= 🧩 BLOCK 1: conversation_handler() =========================
+
 async def conversation_handler(bot, msg: Message):
     uid = msg.from_user.id
     text = msg.text.strip()
     convo = user_conversations.get(uid)
-    if not convo or "state" not in convo: return
+    if not convo or "state" not in convo:
+        return
 
     state = convo["state"]
     media_type = "movie" if "release_date" in convo["details"] else "tv"
 
     async def process_link(quality: str, next_state: str, next_prompt: str):
+        """Handles movie quality link inputs with shortener support"""
         if text.lower() != 'skip':
             shortened = await shorten_link(uid, text)
             convo["links"][quality] = shortened
             await msg.reply_text(f"✅ {quality} link added.")
         else:
             await msg.reply_text(f"☑️ {quality} link skipped.")
-        
         convo["state"] = next_state
         await msg.reply_text(next_prompt)
 
+    # ========== Language Setup ==========
     if state == "wait_lang":
         convo["language"] = text.capitalize() if text.lower() != 'skip' else convo["details"].get('original_language', 'en').capitalize()
+
         if media_type == "movie":
             convo["state"] = "wait_480p"
             await msg.reply_text("✅ Language set. Now send the **480p** link or type `skip`.")
         else:
             convo["state"] = "wait_season_number"
-            await msg.reply_text("✅ Language set. Now enter the season number (e.g., 1, 2).")
+            await msg.reply_text("✅ Language set. Now enter the **Season number** (e.g., 1, 2).")
 
+    # ========== Movie Section ==========
     elif state == "wait_480p":
         await process_link("480p", "wait_720p", "Now send the **720p** link or type `skip`.")
+
     elif state == "wait_720p":
         await process_link("720p", "wait_1080p", "Now send the **1080p** link or type `skip`.")
+
     elif state == "wait_1080p":
         if text.lower() != 'skip':
             convo["links"]["1080p"] = await shorten_link(uid, text)
@@ -472,24 +480,61 @@ async def conversation_handler(bot, msg: Message):
         status_msg = await msg.reply_text("✅ All info collected. Generating post...")
         await generate_final_post_preview(bot, uid, msg.chat.id, status_msg)
 
+    # ========== TV Series Section ==========
     elif state == "wait_season_number":
         if text.lower() == 'done':
-            if not convo.get('seasons'): return await msg.reply_text("⚠️ You haven't added any season links.")
+            if not convo.get('seasons'):
+                return await msg.reply_text("⚠️ You haven't added any season links.")
             convo['links'] = convo['seasons']
             convo["state"] = "generating_post"
             status_msg = await msg.reply_text("✅ All season info collected. Generating post...")
             await generate_final_post_preview(bot, uid, msg.chat.id, status_msg)
             return
-        if not text.isdigit() or int(text) <= 0: return await msg.reply_text("❌ Invalid number. Please enter a correct season number.")
-        convo['current_season'] = text; convo['state'] = 'wait_season_link'
-        await msg.reply_text(f"👍 OK. Now send the download link for **Season {text}**.")
-    
+
+        if not text.isdigit() or int(text) <= 0:
+            return await msg.reply_text("❌ Invalid number. Please enter a correct season number.")
+
+        convo['current_season'] = text
+        convo['state'] = 'ask_episode_or_done'
+        await msg.reply_text(
+            f"✅ Season {text} selected.\n\n"
+            "Do you want to add specific **Episode**?\n"
+            "If yes, please enter the **Episode number (e.g., 5)**.\n"
+            "If you want to give only season link, type **done**."
+        )
+
+    elif state == "ask_episode_or_done":
+        if text.lower() == 'done':
+            convo['state'] = 'wait_season_link'
+            await msg.reply_text(f"👉 Send the **download link** for Season {convo['current_season']}.")
+        elif text.isdigit():
+            convo['current_episode'] = text
+            convo['state'] = 'wait_episode_link'
+            await msg.reply_text(f"🎬 Now send the **link for Season {convo['current_season']} Episode {text}**.")
+        else:
+            await msg.reply_text("⚠️ Invalid input. Type `done` or give episode number (e.g., 5).")
+
     elif state == "wait_season_link":
         season_num = convo.get('current_season')
         shortened = await shorten_link(uid, text)
         convo.setdefault('seasons', {})[season_num] = shortened
         convo['state'] = 'wait_season_number'
-        await msg.reply_text(f"✅ Link for Season {season_num} added.\n\n**👉 Enter the next season number, or type `done` to finish.**")
+        await msg.reply_text(
+            f"✅ Link for Season {season_num} added.\n\n"
+            "👉 Enter next season number or type `done` to finish."
+        )
+
+    elif state == "wait_episode_link":
+        season_num = convo.get('current_season')
+        episode_num = convo.get('current_episode')
+        shortened = await shorten_link(uid, text)
+        key = f"{season_num}x{episode_num}"  # Season 1 Episode 5 → 1x5
+        convo.setdefault('seasons', {})[key] = shortened
+        convo['state'] = 'ask_episode_or_done'
+        await msg.reply_text(
+            f"✅ Link for **Season {season_num} Episode {episode_num}** added.\n\n"
+            "👉 Enter next episode number or type `done` to move to next season."
+    )
 
 # ---------------------------------------------------------------------------
 # 🔹 Final Post Preview & Posting
@@ -556,6 +601,8 @@ async def generate_final_post_preview(bot, uid, chat_id, status_msg: Message):
             "I will automatically post this content there."
         )
 
+# ========================= 🧩 BLOCK 2: generate_channel_caption() =========================
+
 async def generate_channel_caption(convo: dict, user_data: dict):
     data = convo["details"]
     links = convo["links"]
@@ -582,19 +629,49 @@ async def generate_channel_caption(convo: dict, user_data: dict):
     download_section_header = "📦 **Download Links** 📦"
     download_links = ""
 
+    # --- Helper: Short/Long link detector ---
+    def is_short_link(link: str):
+        short_domains = ["bit.ly", "tinyurl", "shorturllink", "ouo", "droplink", "shorter", "gplinks", "link", "urlshort"]
+        return any(domain in link for domain in short_domains) and len(link) < 35
+
+    # ========== TV Series Section ==========
     if is_tv:
-        sorted_seasons = sorted(links.keys(), key=lambda x: int(re.search(r'\d+', str(x)).group()))
-        download_links = "\n".join([f"✅ **[Download Season {s}]({links[s]})**" for s in sorted_seasons])
+        tv_links = []
+        for key, link in links.items():
+            if not link:
+                continue
+
+            if "x" in str(key):
+                season_num, episode_num = key.split("x", 1)
+                display_label = f"Season {season_num} Episode {episode_num}"
+            else:
+                display_label = f"Season {key}"
+
+            if is_short_link(link):
+                display_text = f"📁 {display_label}\n🔗 [{link}]({link})"
+            else:
+                display_text = f"📁 {display_label}\n🔗 {link}"
+
+            tv_links.append(display_text)
+
+        download_links = "\n\n".join(tv_links)
+
+    # ========== Movie Section ==========
     else:
         movie_links = []
-        if links.get('480p'): movie_links.append(f"🎞️ **[Download 480p]({links['480p']})**")
-            
-        if links.get('720p'): movie_links.append(f"📺 **[Download 720p]({links['720p']})**")
-            
-        if links.get('1080p'): movie_links.append(f"🎥 **[Download 1080p]({links['1080p']})**")
+        for quality in ["480p", "720p", "1080p"]:
+            link = links.get(quality)
+            if not link:
+                continue
+            if is_short_link(link):
+                movie_links.append(f"📁 {quality.upper()}\n🔗 [{link}]({link})")
+            else:
+                emoji = "🎞️" if quality == "480p" else "📺" if quality == "720p" else "🎥"
+                movie_links.append(f"{emoji} [Download {quality}]({link})")
+
         download_links = "\n".join(movie_links)
 
-    # --- নতুন টিউটোরিয়াল সেকশন ---
+    # --- Tutorial section (optional) ---
     tutorial_section = ""
     if user_data.get('tutorial_link'):
         tutorial_url = user_data['tutorial_link']
@@ -603,24 +680,21 @@ async def generate_channel_caption(convo: dict, user_data: dict):
             f"┃    <a href='{tutorial_url}'>📥 𝗪𝗔𝗧𝗖𝗛 𝗧𝗨𝗧𝗢𝗥𝗜𝗔𝗟 𝗡𝗢𝗪 ▶️</a>\n"
             "╰━━━━━━━━━━━━━━━━⊱"
         )
-    
-    custom_caption = user_data.get('custom_caption', '')
+
+    # --- Footer section ---
     footer = (
         "━━━━━━━━━━━━━━━━━━━━━━━\n"
         "**@YourChannel** | **@YourBot**"
     )
 
-    # --- চূড়ান্ত ক্যাপশন একত্রিত করা ---
+    # --- Final caption merge ---
     final_parts = [caption_header]
     if download_links:
         final_parts.append(download_section_header + "\n" + download_links)
     if tutorial_section:
         final_parts.append(tutorial_section)
-    if custom_caption:
-        final_parts.append(custom_caption)
-    
     final_parts.append(footer)
-    
+
     return "\n\n".join(final_parts)
 
 async def post_to_channel(bot: Client, user_id: int, channel_id: int, status_message: Message):
