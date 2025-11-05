@@ -155,70 +155,63 @@ def format_runtime(minutes: int):
 # ---------------------------------------------------------------------------
 # 🔹 TMDB API & Smart Poster Generation
 # ---------------------------------------------------------------------------
-
 def search_tmdb(query: str):
     """
-    Searches TMDB using a more robust method.
-    It fetches a list of candidates and then uses fuzzy logic to determine if
-    it's a direct match or a list of suggestions.
+    Searches TMDB. If no direct results, returns a list of fuzzy suggestions.
+    Returns a tuple: (status, results)
+    status can be 'DIRECT', 'SUGGESTIONS', or 'NO_RESULTS'.
     """
-    logger.info(f"Performing robust TMDB search for query: '{query}'")
+    logger.info(f"Performing TMDB search for query: '{query}'")
     
     year, name = None, query.strip()
     match = re.search(r'(.+?)\s*\(?(\d{4})\)?$', query)
     if match: name, year = match.group(1).strip(), match.group(2)
 
-    # --- Step 1: Build a proper request with parameters to handle encoding ---
-    base_url = "https://api.themoviedb.org/3/search/multi"
-    params = {
-        'api_key': TMDB_API_KEY,
-        'query': name  # The 'requests' library will handle URL encoding
-    }
-    if year:
-        params['year'] = year
-
+    # --- Step 1: Direct Search ---
+    search_url = f"https://api.themoviedb.org/3/search/multi?api_key={TMDB_API_KEY}&query={name}" + (f"&year={year}" if year else "")
     try:
-        r = requests.get(base_url, params=params, timeout=10)
+        r = requests.get(search_url, timeout=10)
         r.raise_for_status()
-        candidates = [res for res in r.json().get("results", []) if res.get("media_type") in ["movie", "tv"]]
-
-        if not candidates:
-            logger.warning(f"TMDB API returned no candidates for query: '{name}'")
-            return 'NO_RESULTS', []
+        results = [res for res in r.json().get("results", []) if res.get("media_type") in ["movie", "tv"]]
+        
+        if results:
+            logger.info(f"Direct search successful. Found {len(results)} results.")
+            return 'DIRECT', results[:5]
 
     except requests.exceptions.RequestException as e:
-        logger.error(f"TMDB API request failed: {e}")
+        logger.error(f"TMDB direct search request failed: {e}")
         return 'NO_RESULTS', []
 
-    # --- Step 2: Analyze the results with fuzzy logic ---
+    # --- Step 2: Fuzzy Search for Suggestions (if direct search fails) ---
+    logger.info("Direct search failed. Trying to find suggestions...")
+    try:
+        fuzzy_search_url = f"https://api.themoviedb.org/3/search/multi?api_key={TMDB_API_KEY}&query={name}"
+        r_fuzzy = requests.get(fuzzy_search_url, timeout=10)
+        r_fuzzy.raise_for_status()
+        candidates = [res for res in r_fuzzy.json().get("results", []) if res.get("media_type") in ["movie", "tv"]]
 
-    # Get the title of the very first result returned by TMDB
-    first_result_title = candidates[0].get('title') or candidates[0].get('name', '')
-    
-    # Calculate how similar the user's query is to the best result TMDB found
-    # token_set_ratio is excellent for handling extra words like 'kaaram' vs 'kram'
-    score = fuzz.token_set_ratio(name.lower(), first_result_title.lower())
-    
-    logger.info(f"Fuzzy score between '{name}' and '{first_result_title}' is: {score}")
+        if not candidates:
+            return 'NO_RESULTS', []
 
-    # --- Step 3: Decide the outcome based on the score ---
+        scored_candidates = []
+        for candidate in candidates:
+            title = candidate.get('title') or candidate.get('name', '')
+            score = fuzz.ratio(name.lower(), title.lower())
+            if score > 65:  # মিল ৬৫% এর বেশি হলে তাকে সাজেশন হিসেবে গণ্য করা হবে
+                candidate['fuzzy_score'] = score
+                scored_candidates.append(candidate)
+        
+        if scored_candidates:
+            # সেরা মিলগুলো উপরে দেখানোর জন্য স্কোর অনুযায়ী সাজানো হলো
+            scored_candidates.sort(key=lambda x: x['fuzzy_score'], reverse=True)
+            logger.info(f"Found {len(scored_candidates)} suggestions.")
+            return 'SUGGESTIONS', scored_candidates[:5]
 
-    # If the score is very high, it's a confident, direct match.
-    if score > 90:
-        logger.info("High confidence score. Treating as a DIRECT match.")
-        return 'DIRECT', candidates[:5]
-    
-    # If the score is reasonably good, it means the user likely made a typo,
-    # and the results are suggestions.
-    elif score > 55:
-        logger.info("Moderate score. Treating results as SUGGESTIONS.")
-        return 'SUGGESTIONS', candidates[:5]
-    
-    # If the score is too low, it means even the best result TMDB found is not
-    # relevant to the user's query.
-    else:
-        logger.warning("Score is too low. No relevant results found.")
-        return 'NO_RESULTS', []
+    except requests.exceptions.RequestException as e:
+        logger.error(f"TMDB fuzzy search request failed: {e}")
+
+    return 'NO_RESULTS', []
+
         
 def get_tmdb_details(media_type: str, media_id: int):
     url = f"https://api.themoviedb.org/3/{media_type}/{media_id}?api_key={TMDB_API_KEY}"
