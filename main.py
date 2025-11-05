@@ -768,23 +768,40 @@ async def reaction_handler(bot, cq: CallbackQuery):
 @app.on_callback_query(filters.regex("^(settings_menu|help_menu|start_menu|create_post_help|cancel_process)$"))
 async def navigation_handler(bot, cq: CallbackQuery):
     data, uid = cq.data, cq.from_user.id
-    if uid in user_conversations: del user_conversations[uid]
+    chat_id = cq.message.chat.id
     
-    await cq.answer()
-    if data == "cancel_process":
-        return await cq.message.edit_text("✅ Process cancelled.")
+    if uid in user_conversations:
+        del user_conversations[uid]
+    
+    await cq.answer() # Callback টি গ্রহণ করা হলো
 
-    start_caption = f"👋 Welcome, {cq.from_user.mention}! How can I help you?"
-    buttons = [
-        [InlineKeyboardButton("🎬 How to Create a Post", callback_data="create_post_help")],
-        [InlineKeyboardButton("⚙️ Settings", callback_data="settings_menu"), InlineKeyboardButton("📚 Help", callback_data="help_menu")],
-        [InlineKeyboardButton("👨‍💻 Developer", url="https://t.me/Prime_Nayem")]
-    ]
-    
+    # --- নতুন লজিক: আগের মেসেজটি ডিলিট করে দেওয়া ---
+    await cq.message.delete()
+
+    if data == "cancel_process":
+        await bot.send_message(chat_id, "✅ Process cancelled.")
+        return
+
     if data == "start_menu":
-        await cq.message.edit_caption(caption=start_caption, reply_markup=InlineKeyboardMarkup(buttons))
+        # হোম পেজ (ছবির মেসেজ) আবার নতুন করে পাঠানো হবে
+        buttons = [
+            [InlineKeyboardButton("🎬 How to Create a Post", callback_data="create_post_help")],
+            [InlineKeyboardButton("⚙️ Settings", callback_data="settings_menu"), InlineKeyboardButton("📚 Help", callback_data="help_menu")],
+            [InlineKeyboardButton("👨‍💻 Developer", url="https://t.me/Prime_Nayem")]
+        ]
+        await bot.send_photo(
+            chat_id=chat_id,
+            photo="https://i.postimg.cc/gjNQNCGK/IMG-20251104-062650-153.jpg",
+            caption=(
+                f"👋 Welcome, {cq.from_user.mention}!\n\n"
+                "I am an Advanced Post Generator Bot. I can help you create attractive posts for movies and series.\n\n"
+                "**To get started, simply send me a Movie or TV Series name!**"
+            ),
+            reply_markup=InlineKeyboardMarkup(buttons)
+        )
     
     elif data == "help_menu" or data == "create_post_help":
+        # হেল্প মেন্যু একটি নতুন টেক্সট মেসেজ হিসেবে পাঠানো হবে
         help_text = (
             "📚 **Help & Commands Guide**\n\n"
             "Here is a complete list of commands you can use:\n\n"
@@ -818,13 +835,14 @@ async def navigation_handler(bot, cq: CallbackQuery):
             "🔹 `/deltutorial`: Remove the tutorial link from your posts.\n"
             "🔹 `/settings`: View a summary of your current settings."
         )
-        # --- মূল পরিবর্তনটি এখানে ---
-        # আমরা edit_caption এর পরিবর্তে edit_text ব্যবহার করছি
-        await cq.message.edit_text(
+        await bot.send_message(
+            chat_id=chat_id,
             text=help_text,
             reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⌫ Back", callback_data="start_menu")]])
-)
+        )
+
     elif data == "settings_menu":
+        # সেটিংস মেন্যুও একটি নতুন টেক্সট মেসেজ হিসেবে পাঠানো হবে
         user_data = await users_collection.find_one({'user_id': uid}) or {}
         watermark = user_data.get('watermark_text', 'Not Set')
         api = "******" + user_data.get('shortener_api', ' ')[-4:] if user_data.get('shortener_api') else 'Not Set'
@@ -838,8 +856,11 @@ async def navigation_handler(bot, cq: CallbackQuery):
             f"🎥 **Tutorial Link:** `{tutorial}`\n\n"
             "Use the commands in `/help` to change these."
         )
-        await cq.message.edit_caption(caption=settings_text, reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⌫ Back", callback_data="start_menu")]])
-        )
+        await bot.send_message(
+            chat_id=chat_id,
+            text=settings_text,
+            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⌫ Back", callback_data="start_menu")]])
+    )
 
 @app.on_callback_query(filters.regex("refresh_check"))
 async def refresh_callback(bot, cq: CallbackQuery):
