@@ -20,7 +20,7 @@ from dotenv import load_dotenv
 from PIL import Image, ImageDraw, ImageFont
 import numpy as np
 import cv2
-
+from thefuzz import fuzz
 # --- Telegram & Database ---
 from pyrogram import Client, filters, enums
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
@@ -364,7 +364,7 @@ ALL_COMMANDS = [
     "start", "addchannel", "mychannels", "delchannel", "setcap", "delcap", 
     "seecap", "addbutton", "mybuttons", "delbutton", "clearbuttons", 
     "setwatermark", "setapi", "setdomain", "settutorial", "settings", "badge",
-    "stats", "broadcast"
+    "stats", "broadcast", "help", "deltutorial"
 ]
 
 @app.on_message(filters.private & filters.text & ~filters.command(ALL_COMMANDS))
