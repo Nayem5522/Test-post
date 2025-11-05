@@ -519,7 +519,7 @@ async def generate_channel_caption(convo: dict, user_data: dict):
         f"🎭 **Genre:** `{info['genres']}`\n"
         f"🈳 **Language:** `{info['language']}`\n"
         f"⏰ **Runtime:** `{info['runtime']}`\n"
-        f"╚══════════════════════════╝"
+        f"╚══════════════════════╝"
     )
 
     download_section_header = "📦 **Download Links** 📦"
@@ -531,7 +531,9 @@ async def generate_channel_caption(convo: dict, user_data: dict):
     else:
         movie_links = []
         if links.get('480p'): movie_links.append(f"🎞️ **[Download 480p]({links['480p']})**")
+            
         if links.get('720p'): movie_links.append(f"📺 **[Download 720p]({links['720p']})**")
+            
         if links.get('1080p'): movie_links.append(f"🎥 **[Download 1080p]({links['1080p']})**")
         download_links = "\n".join(movie_links)
 
@@ -540,8 +542,8 @@ async def generate_channel_caption(convo: dict, user_data: dict):
     if user_data.get('tutorial_link'):
         tutorial_url = user_data['tutorial_link']
         tutorial_section = (
-            "╭━❰📚 ʜᴏᴡ ᴛᴏ ᴡᴀᴛᴄʜ ᴏʀ ᴅᴏᴡɴʟᴏᴀᴅ ᴛᴜᴛᴏʀɪᴀʟ ❱━⊱\n"
-            f"┃       <a href='{tutorial_url}'>📥 𝗪𝗔𝗧𝗖𝗛 𝗧𝗨𝗧𝗢𝗥𝗜𝗔𝗟 𝗡𝗢𝗪 ▶️</a>\n"
+            "╭━❰📚 ʜᴏᴡ ᴛᴏ ᴏᴘᴇɴ ʟɪɴᴋꜱ ᴛᴜᴛᴏʀɪᴀʟ ❱━⊱\n"
+            f"┃    <a href='{tutorial_url}'>📥 𝗪𝗔𝗧𝗖𝗛 𝗧𝗨𝗧𝗢𝗥𝗜𝗔𝗟 𝗡𝗢𝗪 ▶️</a>\n"
             "╰━━━━━━━━━━━━━━━━⊱"
         )
     
@@ -650,8 +652,8 @@ async def direct_media_post_callback(bot, cq: CallbackQuery):
         if user_data.get('tutorial_link'):
             tutorial_url = user_data['tutorial_link']
             tutorial_text = (
-                "╭━❰📚 ʜᴏᴡ ᴛᴏ ᴡᴀᴛᴄʜ ᴏʀ ᴅᴏᴡɴʟᴏᴀᴅ ᴛᴜᴛᴏʀɪᴀʟ ❱━⊱\n"
-                f"┃       <a href='{tutorial_url}'>📥 𝗪𝗔𝗧𝗖𝗛 𝗧𝗨𝗧𝗢𝗥𝗜𝗔𝗟 𝗡𝗢𝗪 ▶️</a>\n"
+                "╭━❰📚 ʜᴏᴡ ᴛᴏ ᴏᴘᴇɴ ʟɪɴᴋꜱ ᴛᴜᴛᴏʀɪᴀʟ ❱━⊱\n"
+                f"┃    <a href='{tutorial_url}'>📥 𝗪𝗔𝗧𝗖𝗛 𝗧𝗨𝗧𝗢𝗥𝗜𝗔𝗟 𝗡𝗢𝗪 ▶️</a>\n"
                 "╰━━━━━━━━━━━━━━━━⊱"
             )
             caption_parts.append(tutorial_text)
@@ -784,28 +786,42 @@ async def navigation_handler(bot, cq: CallbackQuery):
     
     elif data == "help_menu" or data == "create_post_help":
         help_text = (
-            "📚 **Help Menu**\n\n"
-            "**Post Creation:**\n"
-            "🔹 **Send Movie/Series Name**: Simply type and send a name to start.\n"
-            "   (Example: `Avatar 2009`)\n"
-            "🔹 **Send Photo/Video**: Send media directly to post it.\n\n"
-            "**Channel Management:**\n"
-            "🔹 `/addchannel <ID>`: Add a channel by its ID.\n"
-            "🔹 `Forward from Channel`: Make bot admin and forward to add.\n"
-            "🔹 `/delchannel`: Remove a channel.\n"
-            "🔹 `/mychannels`: View your channels.\n\n"
-            "**Customization:**\n"
-            "🔹 `/setcap <text>`: Set a custom caption.\n"
-            "🔹 `/addbutton <name | link>`: Add a custom button.\n"
-            "🔹 `/setwatermark <text>`: Set a watermark on posters.\n"
-            "🔹 `/badge <text>`: Set a one-time badge for the next post.\n\n"
-            "**Link Shortener & More:**\n"
-            "🔹 `/setapi <API>`: Set shortener API Key.\n"
-            "🔹 `/setdomain <domain>`: Set shortener domain.\n"
-            "🔹 `/settutorial <link>`: Set tutorial link."
+            "📚 **Help & Commands Guide**\n\n"
+            "Here is a complete list of commands you can use:\n\n"
+            "** postcard Creation**\n"
+            "🔹 **Create Smart Post**: Just send a movie/series name.\n"
+            "   _Example_: `Avatar 2009`\n"
+            "🔹 **Create Simple Post**: Send a photo or video directly to me.\n\n"
+            "**Channel Management**\n"
+            "🔹 `/mychannels`: View your list of saved channels.\n"
+            "🔹 `/addchannel <ID>`: Add a channel using its ID.\n"
+            "🔹 `Forward from Channel`: A simpler way to add a channel (make bot admin first).\n"
+            "🔹 `/delchannel`: Remove a channel from your list.\n\n"
+            "** Caption & Buttons**\n"
+            "🔹 `/setcap <text>`: Set a global custom caption for your posts.\n"
+            "🔹 `/seecap`: View your current custom caption.\n"
+            "🔹 `/delcap`: Delete your custom caption.\n"
+            "🔹 `/addbutton <Name | URL>`: Add a custom URL button.\n"
+            "   _Example_: `/addbutton Join Now | https://t.me/yourgroup`\n"
+            "🔹 `/mybuttons`: View all your custom buttons.\n"
+            "🔹 `/delbutton`: Choose a specific button to delete.\n"
+            "🔹 `/clearbuttons`: Remove all custom buttons at once.\n\n"
+            "** Poster Customization**\n"
+            "🔹 `/setwatermark <text>`: Set a watermark for posters.\n"
+            "   _(Send `/setwatermark` without text to remove)_\n"
+            "🔹 `/badge <text>`: Set a one-time badge for the next post.\n"
+            "   _(Send `/badge` without text to remove)_\n\n"
+            "** Link & Other Settings**\n"
+            "🔹 `/setapi <API_Key>`: Set your link shortener API key.\n"
+            "🔹 `/setdomain <domain.com>`: Set your shortener's domain.\n"
+            "🔹 `/settutorial <URL>`: Set the 'How to Download' link.\n"
+            "🔹 `/deltutorial`: Remove the tutorial link from your posts.\n"
+            "🔹 `/settings`: View a summary of your current settings."
         )
-        await cq.message.edit_caption(caption=help_text, reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⌫ Back", callback_data="start_menu")]])
-        )
+        await cq.message.edit_caption(
+            caption=help_text,
+            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⌫ Back", callback_data="start_menu")]])
+    )
     elif data == "settings_menu":
         user_data = await users_collection.find_one({'user_id': uid}) or {}
         watermark = user_data.get('watermark_text', 'Not Set')
@@ -901,41 +917,56 @@ async def button_commands(bot: Client, msg: Message):
 
 @app.on_message(filters.private & filters.command(["setwatermark", "setapi", "setdomain", "settutorial", "deltutorial", "settings", "badge"]))
 async def settings_commands(bot: Client, msg: Message):
-    command, user_id = msg.command[0].lower(), msg.from_user.id
-    if len(msg.command) > 1:
-        value = msg.text.split(" ", 1)[1]
-        if command == "setwatermark":
+    command = msg.command[0].lower()
+    user_id = msg.from_user.id
+    text_parts = msg.text.split(" ", 1)
+    value = text_parts[1] if len(text_parts) > 1 else None
+
+    if command == "setwatermark":
+        if value:
             await users_collection.update_one({"user_id": user_id}, {"$set": {"watermark_text": value}}, upsert=True)
             await msg.reply_text(f"✅ Watermark set to: `{value}`")
-        elif command == "setapi":
-            await users_collection.update_one({"user_id": user_id}, {"$set": {"shortener_api": value}}, upsert=True)
-            await msg.reply_text("✅ Shortener API Key has been set.")
-        elif command == "setdomain":
-            value = value.replace("https://", "").replace("http://", "")
-            await users_collection.update_one({"user_id": user_id}, {"$set": {"shortener_url": value}}, upsert=True)
-            await msg.reply_text(f"✅ Shortener domain set to: `{value}`")
-        elif command == "settutorial":
-            await users_collection.update_one({"user_id": user_id}, {"$set": {"tutorial_link": value}}, upsert=True)
-            await msg.reply_text("✅ Tutorial link has been set.")
-        elif command == "badge":
-            user_conversations.setdefault(user_id, {})['temp_badge_text'] = value
-            await msg.reply_text(f"✅ Badge for the next post set to: `{value}`. This is a one-time setting.")
-    else:
-        if command == "settings":
-            mock_cq = type("Mock", (), {"data": "settings_menu", "from_user": msg.from_user, "message": msg, "answer": lambda: asyncio.sleep(0)})
-            await navigation_handler(bot, mock_cq)
-            return
-        elif command == "setwatermark":
+        else:
             await users_collection.update_one({"user_id": user_id}, {"$unset": {"watermark_text": ""}})
             await msg.reply_text("🗑️ Watermark removed.")
-        elif command == "badge":
+    
+    elif command == "setapi":
+        if value:
+            await users_collection.update_one({"user_id": user_id}, {"$set": {"shortener_api": value}}, upsert=True)
+            await msg.reply_text("✅ Shortener API Key has been set.")
+        else:
+            await msg.reply_text("⚠️ **Usage:** `/setapi [API_KEY]`")
+
+    elif command == "setdomain":
+        if value:
+            clean_value = value.replace("https://", "").replace("http://", "")
+            await users_collection.update_one({"user_id": user_id}, {"$set": {"shortener_url": clean_value}}, upsert=True)
+            await msg.reply_text(f"✅ Shortener domain set to: `{clean_value}`")
+        else:
+            await msg.reply_text("⚠️ **Usage:** `/setdomain [yourdomain.com]`")
+
+    elif command == "settutorial":
+        if value:
+            await users_collection.update_one({"user_id": user_id}, {"$set": {"tutorial_link": value}}, upsert=True)
+            await msg.reply_text("✅ Tutorial link has been set.")
+        else:
+            await msg.reply_text("⚠️ **Usage:** `/settutorial [https://your-link.com]`")
+
+    elif command == "deltutorial":
+        await users_collection.update_one({"user_id": user_id}, {"$unset": {"tutorial_link": ""}})
+        await msg.reply_text("🗑️ Tutorial link has been deleted!")
+
+    elif command == "badge":
+        if value:
+            user_conversations.setdefault(user_id, {})['temp_badge_text'] = value
+            await msg.reply_text(f"✅ Badge for the next post set to: `{value}`. This is a one-time setting.")
+        else:
             user_conversations.get(user_id, {}).pop('temp_badge_text', None)
             await msg.reply_text("🗑️ One-time badge text removed.")
-        elif command == "deltutorial": # নতুন ডিলিট অপশন
-            await users_collection.update_one({"user_id": user_id}, {"$unset": {"tutorial_link": ""}})
-            await msg.reply_text("🗑️ Tutorial link has been deleted!")
-        else:
-            await msg.reply_text("⚠️ A value is required for this command.")
+
+    elif command == "settings":
+        mock_cq = type("Mock", (), {"data": "settings_menu", "from_user": msg.from_user, "message": msg, "answer": lambda: asyncio.sleep(0)})
+        await navigation_handler(bot, mock_cq)
             
 @app.on_message(filters.private & filters.command(["stats", "broadcast"]) & filters.user(OWNER_ID))
 async def owner_commands(bot: Client, msg: Message):
