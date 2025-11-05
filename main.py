@@ -156,17 +156,61 @@ def format_runtime(minutes: int):
 # 🔹 TMDB API & Smart Poster Generation
 # ---------------------------------------------------------------------------
 def search_tmdb(query: str):
+    """
+    Searches TMDB. If no direct results, returns a list of fuzzy suggestions.
+    Returns a tuple: (status, results)
+    status can be 'DIRECT', 'SUGGESTIONS', or 'NO_RESULTS'.
+    """
+    logger.info(f"Performing TMDB search for query: '{query}'")
+    
     year, name = None, query.strip()
     match = re.search(r'(.+?)\s*\(?(\d{4})\)?$', query)
     if match: name, year = match.group(1).strip(), match.group(2)
-    url = f"https://api.themoviedb.org/3/search/multi?api_key={TMDB_API_KEY}&query={name}" + (f"&year={year}" if year else "")
+
+    # --- Step 1: Direct Search ---
+    search_url = f"https://api.themoviedb.org/3/search/multi?api_key={TMDB_API_KEY}&query={name}" + (f"&year={year}" if year else "")
     try:
-        r = requests.get(url, timeout=10)
+        r = requests.get(search_url, timeout=10)
         r.raise_for_status()
-        results = r.json().get("results", [])
-        return [res for res in results if res.get("media_type") in ["movie", "tv"]][:5]
-    except Exception as e:
-        logger.error(f"TMDB Search Error: {e}"); return []
+        results = [res for res in r.json().get("results", []) if res.get("media_type") in ["movie", "tv"]]
+        
+        if results:
+            logger.info(f"Direct search successful. Found {len(results)} results.")
+            return 'DIRECT', results[:5]
+
+    except requests.exceptions.RequestException as e:
+        logger.error(f"TMDB direct search request failed: {e}")
+        return 'NO_RESULTS', []
+
+    # --- Step 2: Fuzzy Search for Suggestions (if direct search fails) ---
+    logger.info("Direct search failed. Trying to find suggestions...")
+    try:
+        fuzzy_search_url = f"https://api.themoviedb.org/3/search/multi?api_key={TMDB_API_KEY}&query={name}"
+        r_fuzzy = requests.get(fuzzy_search_url, timeout=10)
+        r_fuzzy.raise_for_status()
+        candidates = [res for res in r_fuzzy.json().get("results", []) if res.get("media_type") in ["movie", "tv"]]
+
+        if not candidates:
+            return 'NO_RESULTS', []
+
+        scored_candidates = []
+        for candidate in candidates:
+            title = candidate.get('title') or candidate.get('name', '')
+            score = fuzz.ratio(name.lower(), title.lower())
+            if score > 65:  # মিল ৬৫% এর বেশি হলে তাকে সাজেশন হিসেবে গণ্য করা হবে
+                candidate['fuzzy_score'] = score
+                scored_candidates.append(candidate)
+        
+        if scored_candidates:
+            # সেরা মিলগুলো উপরে দেখানোর জন্য স্কোর অনুযায়ী সাজানো হলো
+            scored_candidates.sort(key=lambda x: x['fuzzy_score'], reverse=True)
+            logger.info(f"Found {len(scored_candidates)} suggestions.")
+            return 'SUGGESTIONS', scored_candidates[:5]
+
+    except requests.exceptions.RequestException as e:
+        logger.error(f"TMDB fuzzy search request failed: {e}")
+
+    return 'NO_RESULTS', []
 
 def get_tmdb_details(media_type: str, media_id: int):
     url = f"https://api.themoviedb.org/3/{media_type}/{media_id}?api_key={TMDB_API_KEY}"
@@ -326,19 +370,23 @@ ALL_COMMANDS = [
 @app.on_message(filters.private & filters.text & ~filters.command(ALL_COMMANDS))
 async def post_creation_entry(bot, msg: Message):
     uid = msg.from_user.id
+    query = msg.text.strip()
+
+    bot_status_prefixes = ("🔍", "✅", "❌", "⚠️", "👍", "⏳", "🖼️", "📝")
+    if query.startswith(bot_status_prefixes) or len(query) > 150:
+        logger.warning(f"Ignoring likely bot status message or long query from user {uid}: {query[:50]}...")
+        return
+
     if uid in user_conversations and "state" in user_conversations[uid]:
-        # If user is in a conversation, let the handler manage it
         return await conversation_handler(bot, msg)
     
-    query = msg.text
     processing_msg = await msg.reply_text(f"🔍 Searching for `{query}`...")
     
-    # Run synchronous search in executor
     loop = asyncio.get_running_loop()
-    results = await loop.run_in_executor(executor, search_tmdb, query)
+    status, results = await loop.run_in_executor(executor, search_tmdb, query)
     
-    if not results:
-        return await processing_msg.edit_text("❌ No results found. Please check the name and year.")
+    if status == 'NO_RESULTS':
+        return await processing_msg.edit_text("❌ No results found. Please check the spelling and try again.")
     
     buttons = []
     for r in results:
@@ -348,7 +396,15 @@ async def post_creation_entry(bot, msg: Message):
         buttons.append([InlineKeyboardButton(f"{media_icon} {title} ({year})", callback_data=f"select_post_{r['media_type']}_{r['id']}")])
     
     buttons.append([InlineKeyboardButton("❌ Cancel", callback_data="cancel_process")])
-    await processing_msg.edit_text("**👇 Choose from the results:**", reply_markup=InlineKeyboardMarkup(buttons))
+    
+    # স্ট্যাটাস অনুযায়ী মেসেজ পরিবর্তন করা হবে
+    if status == 'DIRECT':
+        await processing_msg.edit_text("**👇 Choose from the results:**", reply_markup=InlineKeyboardMarkup(buttons))
+    elif status == 'SUGGESTIONS':
+        await processing_msg.edit_text(
+            "❌ **No exact match found. Did you mean one of these?**",
+            reply_markup=InlineKeyboardMarkup(buttons)
+    )
 
 @app.on_callback_query(filters.regex("^select_post_"))
 async def select_post_callback(bot, cq: CallbackQuery):
