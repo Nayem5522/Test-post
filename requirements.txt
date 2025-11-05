@@ -7,3 +7,6 @@ Pillow
 numpy
 opencv-python-headless
 python-dotenv
+
+thefuzz
+python-levenshtein
