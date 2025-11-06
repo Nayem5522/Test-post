@@ -381,7 +381,7 @@ ALL_COMMANDS = [
     "settings", "stats", "broadcast", "help"
 ]
 
-@app.on_message(filters.private & filters.text & ~filters.command(ALL_COMMANDS))
+@app.on_message(filters.private & filters.text & ~filters.command(ALL_COMMANDS) & ~filters.forwarded)
 async def post_creation_entry(bot, msg: Message):
     uid = msg.from_user.id
     query = msg.text.strip()
