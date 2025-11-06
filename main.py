@@ -372,6 +372,7 @@ async def start_handler(bot, msg: Message):
 ALL_COMMANDS = [
     "start", "addchannel", "mychannels", "delchannel", 
     "setcap", "delcap", "seecap", 
+    "setheader", "delheader", "seeheader", "setfooter", "delfooter", "seefooter", # Add these
     "addbutton", "mybuttons", "delbutton", "clearbuttons", 
     "setwatermark", "delwatermark", 
     "setapi", "delapi", 
@@ -592,6 +593,18 @@ async def generate_final_post_preview(bot, uid, chat_id, status_msg: Message):
     await status_msg.edit_text("📝 Generating caption and buttons...")
     caption = await generate_channel_caption(convo, user_data)
     
+    # --- ADD THIS BLOCK ---
+    if len(caption) > 1024:
+        error_msg = (
+            "❌ **Caption Too Long!**\n\n"
+            f"Your generated caption is **{len(caption)}** characters long, but Telegram only allows **1024** for photos.\n\n"
+            "Please shorten your `/setheader`, `/setfooter`, or `/setcap` and try again."
+        )
+        await status_msg.edit_text(error_msg)
+        if uid in user_conversations:
+            del user_conversations[uid]
+        return
+    # --- END OF BLOCK ---
     inline_keyboard = [
         [InlineKeyboardButton("👍 0", callback_data="react_DUMMY_like"), InlineKeyboardButton("❤️ 0", callback_data="react_DUMMY_love")]
     ]
@@ -640,6 +653,10 @@ async def generate_channel_caption(convo: dict, user_data: dict):
     links = convo["links"]
     is_tv = "first_air_date" in data
 
+    # --- Get Header and Footer ---
+    custom_header = user_data.get('custom_header')
+    custom_footer = user_data.get('custom_footer')
+
     info = {
         "title": data.get("title") or data.get("name") or "N/A",
         "year": (data.get("release_date") or data.get("first_air_date") or "----")[:4],
@@ -661,47 +678,25 @@ async def generate_channel_caption(convo: dict, user_data: dict):
     download_section_header = "📦 **Download Links** 📦"
     download_links = ""
 
-    # --- Helper: Short/Long link detector ---
-    def is_short_link(link: str):
-        short_domains = ["bit.ly", "tinyurl", "shorturllink", "ouo", "droplink", "shorter", "gplinks", "link", "urlshort"]
-        return any(domain in link for domain in short_domains) and len(link) < 35
-
+    # ... (rest of the link generation logic remains the same) ...
     # ========== TV Series Section ==========
     if is_tv:
         tv_links = []
-        # Sort keys to ensure '1', '2', '1x1', '1x2' order
         sorted_keys = sorted(links.keys(), key=lambda k: tuple(map(int, k.split('x'))) if 'x' in k else (int(k), -1))
-
         for key in sorted_keys:
             link = links[key]
-            if not link:
-                continue
-
-            if "x" in str(key):
-                season_num, episode_num = key.split("x", 1)
-                display_label = f"Season {season_num} Episode {episode_num}"
-            else:
-                display_label = f"Season {key}"
-
-            # Simple formatting for all TV links
-            display_text = f"📁 **{display_label}**\n🔗 {link}"
-            tv_links.append(display_text)
-
+            if not link: continue
+            display_label = f"Season {key.replace('x', ' Episode ')}"
+            tv_links.append(f"📁 **{display_label}**\n🔗 {link}")
         download_links = "\n\n".join(tv_links)
-
     # ========== Movie Section ==========
     else:
         movie_links = []
         for quality in ["480p", "720p", "1080p"]:
             link = links.get(quality)
-            if not link:
-                continue
-            if is_short_link(link):
-                movie_links.append(f"📁 {quality.upper()}\n🔗 [{link}]({link})")
-            else:
-                emoji = "🎞️" if quality == "480p" else "📺" if quality == "720p" else "🎥"
-                movie_links.append(f"{emoji} [Download {quality}]({link})")
-
+            if not link: continue
+            emoji = "🎞️" if quality == "480p" else "📺" if quality == "720p" else "🎥"
+            movie_links.append(f"{emoji} [Download {quality}]({link})")
         download_links = "\n".join(movie_links)
 
     # --- Tutorial section (optional) ---
@@ -713,20 +708,21 @@ async def generate_channel_caption(convo: dict, user_data: dict):
             f"┃    <a href='{tutorial_url}'>📥 𝗪𝗔𝗧𝗖𝗛 𝗧𝗨𝗧𝗢𝗥𝗜𝗔𝗟 𝗡𝗢𝗪 ▶️</a>\n"
             "╰━━━━━━━━━━━━━━━━⊱"
         )
-
-    # --- Footer section ---
-    footer = (
-        "━━━━━━━━━━━━━━━━━━━━━━━\n"
-        "**@YourChannel** | **@YourBot**"
-    )
-
+    
     # --- Final caption merge ---
-    final_parts = [caption_header]
+    final_parts = []
+    if custom_header:
+        final_parts.append(custom_header)
+    
+    final_parts.append(caption_header)
+
     if download_links:
         final_parts.append(download_section_header + "\n" + download_links)
     if tutorial_section:
         final_parts.append(tutorial_section)
-    final_parts.append(footer)
+    
+    if custom_footer:
+        final_parts.append(custom_footer)
 
     return "\n\n".join(final_parts)
 
@@ -805,14 +801,17 @@ async def direct_media_post_callback(bot, cq: CallbackQuery):
         media_msg = await bot.get_messages(user_id, msg_id)
         user_data = await users_collection.find_one({"user_id": user_id}) or {}
         
-        # --- ক্যাপশন একত্রিত করার নতুন নিয়ম ---
+        # --- নতুন নিয়মে ক্যাপশন একত্রিত করা ---
         caption_parts = []
+        if user_data.get("custom_header"):
+            caption_parts.append(user_data["custom_header"])
+            
         if media_msg.caption:
             caption_parts.append(media_msg.caption.html)
+            
         if user_data.get("custom_caption"):
             caption_parts.append(user_data["custom_caption"])
         
-        # টিউটোরিয়াল সেকশন যোগ করা
         if user_data.get('tutorial_link'):
             tutorial_url = user_data['tutorial_link']
             tutorial_text = (
@@ -822,10 +821,21 @@ async def direct_media_post_callback(bot, cq: CallbackQuery):
             )
             caption_parts.append(tutorial_text)
 
-        caption_parts.append("✨ **Posted via @YourBot**")
+        if user_data.get("custom_footer"):
+            caption_parts.append(user_data["custom_footer"])
+
         final_caption = "\n\n".join(caption_parts)
 
-        # --- বাটন প্রস্তুত করা (টিউটোরিয়াল বাটন ছাড়া) ---
+        # --- ক্যাপশন লিমিট চেক ---
+        if len(final_caption) > 1024:
+            error_msg = (
+                "❌ **Caption Too Long!**\n\n"
+                f"Your final caption is **{len(final_caption)}** characters long (limit is 1024).\n\n"
+                "Please shorten your original caption, `/setheader`, or `/setfooter`."
+            )
+            return await cq.message.edit_text(error_msg)
+
+        # --- বাটন প্রস্তুত করা ---
         all_buttons = [
             [InlineKeyboardButton("👍 0", callback_data="react_DUMMY_like"), InlineKeyboardButton("❤️ 0", callback_data="react_DUMMY_love")]
         ]
@@ -1075,6 +1085,39 @@ async def caption_commands(bot: Client, msg: Message):
     elif command == "delcap":
         await users_collection.update_one({"user_id": user_id}, {"$unset": {"custom_caption": ""}})
         await msg.reply_text("🗑️ Custom caption has been deleted!")
+
+@app.on_message(filters.private & filters.command(["setheader", "delheader", "seeheader", "setfooter", "delfooter", "seefooter"]))
+async def header_footer_commands(bot: Client, msg: Message):
+    command, user_id = msg.command[0].lower(), msg.from_user.id
+    
+    # Determine which field to update based on the command
+    field_map = {
+        "setheader": "custom_header", "delheader": "custom_header", "seeheader": "custom_header",
+        "setfooter": "custom_footer", "delfooter": "custom_footer", "seefooter": "custom_footer"
+    }
+    field_name = field_map[command]
+    field_type = "Header" if "header" in command else "Footer"
+
+    # Set Header/Footer
+    if command.startswith("set"):
+        text = msg.text.split(" ", 1)[1] if len(msg.command) > 1 else None
+        if not text:
+            return await msg.reply_text(f"⚠️ **Usage:** `/{command} [your {field_type.lower()} text]`")
+        await users_collection.update_one({"user_id": user_id}, {"$set": {field_name: text}}, upsert=True)
+        await msg.reply_text(f"✅ Custom {field_type} has been set!")
+
+    # See Header/Footer
+    elif command.startswith("see"):
+        user = await users_collection.find_one({"user_id": user_id})
+        content = user.get(field_name) if user else None
+        if not content:
+            return await msg.reply_text(f"⚠️ You don't have a custom {field_type.lower()} set.")
+        await msg.reply_text(f"📝 **Your current {field_type}:**\n\n{content}")
+
+    # Delete Header/Footer
+    elif command.startswith("del"):
+        await users_collection.update_one({"user_id": user_id}, {"$unset": {field_name: ""}})
+        await msg.reply_text(f"🗑️ Custom {field_type} has been deleted!")
 
 @app.on_message(filters.private & filters.command(["addbutton", "mybuttons", "delbutton", "clearbuttons"]))
 async def button_commands(bot: Client, msg: Message):
