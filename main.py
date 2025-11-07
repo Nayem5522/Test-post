@@ -340,23 +340,43 @@ async def start_handler(bot, msg: Message):
         try:
             chat = await bot.get_chat(AUTH_CHANNEL)
             invite_link = chat.invite_link or await bot.export_chat_invite_link(AUTH_CHANNEL)
-            btns = [[InlineKeyboardButton(f"✇ Join {chat.title} ✇", url=invite_link)],
-                    [InlineKeyboardButton("🔄 Refresh", callback_data="refresh_check")]]
+            btns = [
+                [InlineKeyboardButton(f"✇ Join {chat.title} ✇", url=invite_link)],
+                [InlineKeyboardButton("🔄 Refresh", callback_data="refresh_check")]
+            ]
             return await msg.reply_photo(
                 photo="https://i.postimg.cc/xdkd1h4m/IMG-20250715-153124-952.jpg",
                 caption=f"👋 Hello {msg.from_user.mention},\n\nPlease join our channel to use this bot.",
                 reply_markup=InlineKeyboardMarkup(btns)
             )
+
         except Exception as e:
             logger.error(f"Could not get invite link for AUTH_CHANNEL {AUTH_CHANNEL}: {e}")
-            return await msg.reply_text("Sorry, there was an error creating the join link for the channel.")
+            error_buttons = [
+                [InlineKeyboardButton("✪ ꜱᴜᴘᴘᴏʀᴛ ɢʀᴏᴜᴘ ✪", url="https://t.me/Prime_Support_Group")]
+            ]
+            return await msg.reply_text(
+                "⚠️ **Oops! Something went wrong while creating the join link.**\n\n"
+                "Please wait a moment while we look into the issue. 🕒\n"
+                "You can also report this problem directly to our support team.\n\n"
+                "🔹 Once reported, our team will fix it as soon as possible.\n\n"
+                "Thank you for your patience 💖",
+                reply_markup=InlineKeyboardMarkup(error_buttons)
+            )
 
     buttons = [
         [InlineKeyboardButton(" 🎬 ʜᴏᴡ ᴛᴏ ᴄʀᴇᴀᴛᴇ ᴀ ᴘᴏꜱᴛ", callback_data="create_post_help")],
-        [InlineKeyboardButton("✪ ꜱᴜᴘᴘᴏʀᴛ ɢʀᴏᴜᴘ", url="https://t.me/Prime_Support_group"), InlineKeyboardButton("〄 ᴜᴘᴅᴀᴛᴇs ᴄʜᴀɴɴᴇʟ", url="https://t.me/PrimeXBots")],
-        [InlineKeyboardButton("⚙️ ꜱᴇᴛᴛɪɴɢꜱ", callback_data="settings_menu"), InlineKeyboardButton("〆 ᴀʙᴏᴜᴛ 〆", callback_data="about_bot")],
+        [
+            InlineKeyboardButton("✪ ꜱᴜᴘᴘᴏʀᴛ ɢʀᴏᴜᴘ", url="https://t.me/Prime_Support_Group"),
+            InlineKeyboardButton("〄 ᴜᴘᴅᴀᴛᴇs ᴄʜᴀɴɴᴇʟ", url="https://t.me/PrimeXBots")
+        ],
+        [
+            InlineKeyboardButton("⚙️ ꜱᴇᴛᴛɪɴɢꜱ", callback_data="settings_menu"),
+            InlineKeyboardButton("〆 ᴀʙᴏᴜᴛ 〆", callback_data="about_bot")
+        ],
         [InlineKeyboardButton("✧ ᴄʀᴇᴀᴛᴏʀ ✧", url="https://t.me/Prime_Nayem")]
     ]
+
     await msg.reply_photo(
         photo="https://i.postimg.cc/gjNQNCGK/IMG-20251104-062650-153.jpg",
         caption=(
@@ -367,13 +387,13 @@ async def start_handler(bot, msg: Message):
             "   ᴊᴜꜱᴛ ꜱᴇɴᴅ ᴍᴇ ᴀ ᴍᴏᴠɪᴇ ᴏʀ ᴛᴠ ꜱᴇʀɪᴇꜱ ɴᴀᴍᴇ — ɪ’ʟʟ ꜰᴇᴛᴄʜ ᴀʟʟ ᴛʜᴇ ᴅᴇᴛᴀɪʟꜱ ᴀɴᴅ ɢᴇɴᴇʀᴀᴛᴇ ᴀ ꜱᴛᴜɴɴɪɴɢ ᴘᴏꜱᴛ ᴀᴜᴛᴏᴍᴀᴛɪᴄᴀʟʟʏ!\n\n"
             "2️⃣ **Qᴜɪᴄᴋ ᴍᴀɴᴜᴀʟ ᴘᴏꜱᴛ:**\n"
             "   ꜱᴇɴᴅ ᴍᴇ ᴀɴʏ ᴘʜᴏᴛᴏ ᴏʀ ᴠɪᴅᴇᴏ, ᴀɴᴅ ɪ’ʟʟ ʟᴇᴛ ʏᴏᴜ ᴄʜᴏᴏꜱᴇ ᴀ ᴄʜᴀɴɴᴇʟ ꜰʀᴏᴍ ʏᴏᴜʀ ʟɪꜱᴛ.\n"
-            "   ɪ’ʟʟ ɪɴꜱᴛᴀɴᴛʟʏ ᴘᴏꜱᴛ ɪᴛ ᴛʜᴇʀᴇ ᴡɪᴛʜ ʏᴏᴜʀ ᴄᴜꜱᴛᴏᴍ ʜᴇᴀᴅᴇʀ, ꜰᴏᴏᴛᴇʀ, ᴄᴀᴘᴛɪᴏɴ, ʙᴜᴛᴛᴏɴꜱ, ᴀɴᴅ ʀᴇᴀᴄᴛɪᴏɴꜱ!\n\n"
+            "   ɪ’ʟʟ ɪɴꜱᴛᴀɴᴛʟʏ ᴘᴏꜱᴛ ɪᴛ ᴡɪᴛʜ ʏᴏᴜʀ ᴄᴜꜱᴛᴏᴍ ʜᴇᴀᴅᴇʀ, ꜰᴏᴏᴛᴇʀ, ᴄᴀᴘᴛɪᴏɴ, ʙᴜᴛᴛᴏɴꜱ, ᴀɴᴅ ʀᴇᴀᴄᴛɪᴏɴꜱ!\n\n"
             "💡 **ᴛʀʏ ɪᴛ ɴᴏᴡ:**\n"
             "ꜱᴇɴᴅ ᴀ ᴍᴏᴠɪᴇ ɴᴀᴍᴇ ᴏʀ ᴀ ᴘʜᴏᴛᴏ/ᴠɪᴅᴇᴏ ᴛᴏ ɢᴇᴛ ꜱᴛᴀʀᴛᴇᴅ!\n\n"
             "📢 @PrimeXBots — Your Creative Posting Assistant 💫"
         ),
         reply_markup=InlineKeyboardMarkup(buttons)
-    )
+            )
 
 # ---------------------------------------------------------------------------
 # 🔹 Post Creation Flow (Triggered by any text that is not a command)
