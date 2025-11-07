@@ -360,7 +360,7 @@ async def start_handler(bot, msg: Message):
     await msg.reply_photo(
         photo="https://i.postimg.cc/gjNQNCGK/IMG-20251104-062650-153.jpg",
         caption=(
-            f"👋 ᴡᴇʟᴄᴏᴍᴇ, {cq.from_user.mention}!\n\n"
+            f"👋 ᴡᴇʟᴄᴏᴍᴇ, {msg.from_user.mention}!\n\n"
             "🎬 ɪ’ᴍ ʏᴏᴜʀ **ᴀᴅᴠᴀɴᴄᴇᴅ ᴘᴏꜱᴛ ɢᴇɴᴇʀᴀᴛᴏʀ ʙᴏᴛ** — ʙᴜɪʟᴛ ᴛᴏ ᴄʀᴇᴀᴛᴇ ʙᴇᴀᴜᴛɪꜰᴜʟ ᴍᴏᴠɪᴇ & ꜱᴇʀɪᴇꜱ ᴘᴏꜱᴛꜱ ᴇꜰꜰᴏʀᴛʟᴇꜱꜱʟʏ!\n\n"
             "✨ **ʜᴇʀᴇ’ꜱ ᴡʜᴀᴛ ɪ ᴄᴀɴ ᴅᴏ ꜰᴏʀ ʏᴏᴜ:**\n"
             "1️⃣ **ꜱᴍᴀʀᴛ ᴀᴜᴛᴏ ᴘᴏꜱᴛ:**\n"
