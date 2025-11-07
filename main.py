@@ -354,7 +354,7 @@ async def start_handler(bot, msg: Message):
     buttons = [
         [InlineKeyboardButton(" 🎬 ʜᴏᴡ ᴛᴏ ᴄʀᴇᴀᴛᴇ ᴀ ᴘᴏꜱᴛ", callback_data="create_post_help")],
         [InlineKeyboardButton("✪ ꜱᴜᴘᴘᴏʀᴛ ɢʀᴏᴜᴘ", url="https://t.me/Prime_Support_group"), InlineKeyboardButton("〄 ᴜᴘᴅᴀᴛᴇs ᴄʜᴀɴɴᴇʟ", url="https://t.me/PrimeXBots")],
-        [InlineKeyboardButton("⚙️ ꜱᴇᴛᴛɪɴɢꜱ", callback_data="settings_menu"), InlineKeyboardButton("〆 ᴀʙᴏᴜᴛ 〆", callback_data="about_btn")],
+        [InlineKeyboardButton("⚙️ ꜱᴇᴛᴛɪɴɢꜱ", callback_data="settings_menu"), InlineKeyboardButton("〆 ᴀʙᴏᴜᴛ 〆", callback_data="about_bot")],
         [InlineKeyboardButton("✧ ᴄʀᴇᴀᴛᴏʀ ✧", url="https://t.me/Prime_Nayem")]
     ]
     await msg.reply_photo(
@@ -960,7 +960,7 @@ async def navigation_handler(bot, cq: CallbackQuery):
         buttons = [
             [InlineKeyboardButton(" 🎬 ʜᴏᴡ ᴛᴏ ᴄʀᴇᴀᴛᴇ ᴀ ᴘᴏꜱᴛ", callback_data="create_post_help")],
             [InlineKeyboardButton("✪ ꜱᴜᴘᴘᴏʀᴛ ɢʀᴏᴜᴘ", url="https://t.me/Prime_Support_group"), InlineKeyboardButton("〄 ᴜᴘᴅᴀᴛᴇs ᴄʜᴀɴɴᴇʟ", url="https://t.me/PrimeXBots")],
-            [InlineKeyboardButton("⚙️ ꜱᴇᴛᴛɪɴɢꜱ", callback_data="settings_menu"), InlineKeyboardButton("〆 ᴀʙᴏᴜᴛ 〆", callback_data="about_btn")],
+            [InlineKeyboardButton("⚙️ ꜱᴇᴛᴛɪɴɢꜱ", callback_data="settings_menu"), InlineKeyboardButton("〆 ᴀʙᴏᴜᴛ 〆", callback_data="about_bot")],
             [InlineKeyboardButton("✧ ᴄʀᴇᴀᴛᴏʀ ✧", url="https://t.me/Prime_Nayem")]
         ]
         await bot.send_photo(
@@ -1080,13 +1080,18 @@ async def navigation_handler(bot, cq: CallbackQuery):
             ])
                             )
 
+# ===================================================================
+# 🔹 About Bot Handler (New Separate Function)
+# ===================================================================
+@app.on_callback_query(filters.regex("^about_bot$"))
+async def about_bot_handler(bot: Client, cq: CallbackQuery):
+    await cq.answer()
+    await cq.message.delete() # Deletes the previous message (the start menu)
 
-@app.on_callback_query(filters.regex("about_btn"))
-async def about_callback(bot, cq: CallbackQuery):
     about_text = (
         "<b>✦✗✦ <a href='https://t.me/PrimeXBots'>ᴍy ᴅᴇᴛᴀɪʟꜱ ʙy ᴘʀɪᴍᴇXʙᴏᴛs</a> ✦✗✦</b>\n\n"
         "‣ ᴍʏ ɴᴀᴍᴇ : @Post_Generator_PrimeXBot\n"
-        "‣ ᴍʏ ʙᴇsᴛ ғʀɪᴇɴᴅ : <a href='tg://settings'>ᴛʜɪs ᴘᴇʀsᴏɴ</a>\n"
+        "‣ ᴍʏ ʙᴇsᴛ ғʀɪᴇɴᴅ : <a href='tg://user?id={user_id}'>ᴛʜɪs ᴘᴇʀsᴏɴ</a>\n"
         "‣ ᴅᴇᴠᴇʟᴏᴘᴇʀ : <a href='https://t.me/Prime_Nayem'>ᴍʀ.ᴘʀɪᴍᴇ</a>\n"
         "‣ ᴜᴘᴅᴀᴛᴇꜱ ᴄʜᴀɴɴᴇʟ : <a href='https://t.me/PrimeXBots'>ᴘʀɪᴍᴇXʙᴏᴛꜱ</a>\n"
         "‣ ᴍᴀɪɴ ᴄʜᴀɴɴᴇʟ : <a href='https://t.me/PrimeCineZone'>Pʀɪᴍᴇ Cɪɴᴇᴢᴏɴᴇ</a>\n"
@@ -1094,19 +1099,18 @@ async def about_callback(bot, cq: CallbackQuery):
         "‣ ᴅᴀᴛᴀ ʙᴀsᴇ : <a href='https://www.mongodb.com/'>ᴍᴏɴɢᴏ ᴅʙ</a>\n"
         "‣ ʙᴏᴛ sᴇʀᴠᴇʀ : <a href='https://heroku.com'>ʜᴇʀᴏᴋᴜ</a>\n"
         "‣ ʙᴜɪʟᴅ sᴛᴀᴛᴜs : ᴠ2.7.1 [sᴛᴀʙʟᴇ]"
-    )
+    ).format(user_id=cq.from_user.id)
     
     await bot.send_message(
-        chat_id=chat_id,
+        chat_id=cq.message.chat.id,
         text=about_text,
-        disable_web_page_preview=True,
         parse_mode=enums.ParseMode.HTML,
+        disable_web_page_preview=True,
         reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("✪ ꜱᴜᴘᴘᴏʀᴛ ɢʀᴏᴜᴘ ✪", url="https://t.me/Prime_Support_Group")],
-                [InlineKeyboardButton("⌫ Back", callback_data="start_menu")]
-            ])
+            [InlineKeyboardButton("✪ ꜱᴜᴘᴘᴏʀᴛ ɢʀᴏᴜᴘ ✪", url="https://t.me/Prime_Support_Group")],
+            [InlineKeyboardButton("⌫ Back", callback_data="start_menu")]
+        ])
     )
-    
     
 @app.on_callback_query(filters.regex("refresh_check"))
 async def refresh_callback(bot, cq: CallbackQuery):
