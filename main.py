@@ -976,64 +976,107 @@ async def navigation_handler(bot, cq: CallbackQuery):
         help_text = (
             "📚 **Help & Commands Guide**\n\n"
             "Here is a complete list of commands you can use:\n\n"
-            "** postcard Creation**\n"
-            "🔹 **Create Smart Post**: Just send a movie/series name.\n"
-            "   _Example_: `Avatar 2009`\n"
-            "🔹 **Create Simple Post**: Send a photo or video directly to me.\n\n"
-            "**Channel Management**\n"
-            "🔹 `/mychannels`: View your list of saved channels.\n"
-            "🔹 `/addchannel <ID>`: Add a channel using its ID.\n"
-            "🔹 `Forward from Channel`: The easiest way to add a channel (make bot admin first).\n"
-            "🔹 `/delchannel`: Remove a channel from your list.\n\n"
-            "** Caption & Buttons**\n"
-            "🔹 `/setcap <text>`: Set a global custom caption for your posts.\n"
-            "🔹 `/seecap`: View your current custom caption.\n"
-            "🔹 `/delcap`: Delete your custom caption.\n"
-            "🔹 `/addbutton <Name | URL>`: Add a custom URL button.\n"
-            "   _Example_: `/addbutton Join Now | https://t.me/yourgroup`\n"
-            "🔹 `/mybuttons`: View all your custom buttons.\n"
-            "🔹 `/delbutton`: Choose a specific button to delete.\n"
-            "🔹 `/clearbuttons`: Remove all custom buttons at once.\n\n"
-            "** Poster Customization**\n"
-            "🔹 `/setwatermark <text>`: Set a watermark for posters.\n"
-            "🔹 `/delwatermark`: Remove your watermark.\n"
-            "🔹 `/badge <text>`: Set a one-time badge for the next post.\n"
-            "🔹 `/delbadge`: Remove the one-time badge.\n\n"
-            "** Link Shortener Settings**\n"
-            "🔹 `/setapi <API_Key>`: Set your link shortener API key.\n"
-            "🔹 `/delapi`: Remove your shortener API key.\n"
-            "🔹 `/setdomain <domain.com>`: Set your shortener's domain.\n"
-            "🔹 `/deldomain`: Remove your shortener domain.\n\n"
-            "** Other Settings**\n"
-            "🔹 `/settutorial <URL>`: Set the 'How to Download' link.\n"
-            "🔹 `/deltutorial`: Remove the tutorial link from your posts.\n"
-            "🔹 `/settings`: View a summary of your current settings."
+            "**╒═══「 ʙᴀꜱɪᴄ ᴄᴏᴍᴍᴀɴᴅꜱ 」**\n"
+            "├ `/start` - ᴄʜᴇᴄᴋ ɪꜰ ᴛʜᴇ ʙᴏᴛ ɪꜱ ʀᴜɴɴɪɴɢ 🥳\n"
+            "└ `/help` - ꜱʜᴏᴡ ᴛʜᴇ ʜᴇʟᴘ ᴍᴇɴᴜ 📚\n\n"
+            
+            "**╒═══「 ᴄʜᴀɴɴᴇʟ ᴍᴀɴᴀɢᴇᴍᴇɴᴛ 」**\n"
+            "├ `/addchannel` - ᴀᴅᴅ ᴀ ᴄʜᴀɴɴᴇʟ ➕\n"
+            "├ `/mychannels` - ꜱᴇᴇ ʏᴏᴜʀ ꜱᴀᴠᴇᴅ ᴄʜᴀɴɴᴇʟꜱ 📂\n"
+            "└ `/delchannel` - ᴅᴇʟᴇᴛᴇ ᴀ ᴄʜᴀɴɴᴇʟ 🗑\n\n"
+
+            "**╒═══「 ᴘᴏꜱᴛ ᴄᴜꜱᴛᴏᴍɪᴢᴀᴛɪᴏɴ 」**\n"
+            "├ `/setheader` - ꜱᴇᴛ ᴀ ᴄᴜꜱᴛᴏᴍ ʜᴇᴀᴅᴇʀ ✍️\n"
+            "├ `/seeheader` - ᴠɪᴇᴡ ʏᴏᴜʀ ʜᴇᴀᴅᴇʀ 👀\n"
+            "├ `/delheader` - ᴅᴇʟᴇᴛᴇ ʏᴏᴜʀ ʜᴇᴀᴅᴇʀ ❌\n"
+            "├ `/setfooter` - ꜱᴇᴛ ᴀ ᴄᴜꜱᴛᴏᴍ ꜰᴏᴏᴛᴇʀ ✍️\n"
+            "├ `/seefooter` - ᴠɪᴇᴡ ʏᴏᴜʀ ꜰᴏᴏᴛᴇʀ 👀\n"
+            "├ `/delfooter` - ᴅᴇʟᴇᴛᴇ ʏᴏᴜʀ ꜰᴏᴏᴛᴇʀ ❌\n"
+            "├ `/setcap` - ꜱᴇᴛ ᴀ ᴄᴜꜱᴛᴏᴍ ᴄᴀᴘᴛɪᴏɴ ✍️\n"
+            "├ `/seecap` - ᴠɪᴇᴡ ʏᴏᴜʀ ᴄᴀᴘᴛɪᴏɴ 👀\n"
+            "└ `/delcap` - ᴅᴇʟᴇᴛᴇ ʏᴏᴜʀ ᴄᴀᴘᴛɪᴏɴ ❌\n\n"
+
+            "**╒═══「 ᴜʀʟ ʙᴜᴛᴛᴏɴꜱ 」**\n"
+            "├ `/addbutton` - ᴀᴅᴅ ᴀ ᴄᴜꜱᴛᴏᴍ ʙᴜᴛᴛᴏɴ 🔘\n"
+            "├ `/mybuttons` - ꜱᴇᴇ ʏᴏᴜʀ ʙᴜᴛᴛᴏɴꜱ 📂\n"
+            "├ `/delbutton` - ᴅᴇʟᴇᴛᴇ ᴀ ʙᴜᴛᴛᴏɴ 🗑\n"
+            "└ `/clearbuttons` - ᴄʟᴇᴀʀ ᴀʟʟ ʙᴜᴛᴛᴏɴꜱ ♻️\n\n"
+
+            "**╒═══「 ᴘᴏꜱᴛᴇʀ ᴄᴜꜱᴛᴏᴍɪᴢᴀᴛɪᴏɴ 」**\n"
+            "├ `/setwatermark` - ꜱᴇᴛ ᴀ ᴡᴀᴛᴇʀᴍᴀʀᴋ 💧\n"
+            "├ `/delwatermark` - ʀᴇᴍᴏᴠᴇ ʏᴏᴜʀ ᴡᴀᴛᴇʀᴍᴀʀᴋ 🚫\n"
+            
+            "**╒═══「 ʟɪɴᴋ ꜱʜᴏʀᴛᴇɴᴇʀ 」**\n"
+            "├ `/setapi` - ꜱᴇᴛ ꜱʜᴏʀᴛᴇɴᴇʀ ᴀᴘɪ ᴋᴇʏ 🔑\n"
+            "├ `/delapi` - ʀᴇᴍᴏᴠᴇ ꜱʜᴏʀᴛᴇɴᴇʀ ᴀᴘɪ ❌\n"
+            "├ `/setdomain` - ꜱᴇᴛ ꜱʜᴏʀᴛᴇɴᴇʀ ᴅᴏᴍᴀɪɴ 🌐\n"
+            "└ `/deldomain` - ʀᴇᴍᴏᴠᴇ ꜱʜᴏʀᴛᴇɴᴇʀ ᴅᴏᴍᴀɪɴ 🚫\n\n"
+
+            "**╒═══「 ᴏᴛʜᴇʀ ꜱᴇᴛᴛɪɴɢꜱ 」**\n"
+            "├ `/settutorial` - ꜱᴇᴛ ᴅᴏᴡɴʟᴏᴀᴅ ᴛᴜᴛᴏʀɪᴀʟ ʟɪɴᴋ 🎥\n"
+            "├ `/deltutorial` - ʀᴇᴍᴏᴠᴇ ᴛʜᴇ ᴛᴜᴛᴏʀɪᴀʟ ʟɪɴᴋ ❌\n"
+            "└ `/settings` - ᴠɪᴇᴡ ʏᴏᴜʀ ᴄᴜʀʀᴇɴᴛ ꜱᴇᴛᴛɪɴɢꜱ ⚙️"
         )
         await bot.send_message(
             chat_id=chat_id,
             text=help_text,
-            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⌫ Back", callback_data="start_menu")]])
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("✪ ꜱᴜᴘᴘᴏʀᴛ ɢʀᴏᴜᴘ ✪", url="https://t.me/Prime_Support_Group")],
+                [InlineKeyboardButton("⌫ Back", callback_data="start_menu")]
+            ])
         )
 
     elif data == "settings_menu":
         user_data = await users_collection.find_one({'user_id': uid}) or {}
+        
+        # --- Fetch and format the channel list ---
+        channels = user_data.get('channels', [])
+        if channels:
+            # Join all channel titles into a single string, each on a new line
+            channel_list_text = "\n".join([f"└ {ch['title']}" for ch in channels])
+        else:
+            channel_list_text = "└ Not Set"
+
+        # Fetch all other settings with default values
+        header = user_data.get('custom_header', 'Not Set')
+        footer = user_data.get('custom_footer', 'Not Set')
+        caption = user_data.get('custom_caption', 'Not Set')
         watermark = user_data.get('watermark_text', 'Not Set')
         api = "******" + user_data.get('shortener_api', ' ')[-4:] if user_data.get('shortener_api') else 'Not Set'
         domain = user_data.get('shortener_url', 'Not Set')
         tutorial = user_data.get('tutorial_link', 'Not Set')
+
         settings_text = (
             "⚙️ **Your Current Settings:**\n\n"
-            f"💧 **Watermark:** `{watermark}`\n"
-            f"🔗 **Shortener API:** `{api}`\n"
-            f"🌐 **Shortener Domain:** `{domain}`\n"
-            f"🎥 **Tutorial Link:** `{tutorial}`\n\n"
+            
+            "**╒═══「 ꜱᴀᴠᴇᴅ ᴄʜᴀɴɴᴇʟꜱ 」**\n"
+            f"{channel_list_text}\n\n"
+
+            "**╒═══「 ᴘᴏꜱᴛ ᴄᴜꜱᴛᴏᴍɪᴢᴀᴛɪᴏɴ 」**\n"
+            f"├ **Header:** `{header}`\n"
+            f"├ **Footer:** `{footer}`\n"
+            f"└ **Extra Caption:** `{caption}`\n\n"
+            
+            "**╒═══「 ᴘᴏꜱᴛᴇʀ ᴄᴜꜱᴛᴏᴍɪᴢᴀᴛɪᴏɴ 」**\n"
+            f"└ **Watermark:** `{watermark}`\n\n"
+            
+            "**╒═══「 ʟɪɴᴋ ꜱʜᴏʀᴛᴇɴᴇʀ 」**\n"
+            f"├ **API Key:** `{api}`\n"
+            f"└ **Domain:** `{domain}`\n\n"
+            
+            "**╒═══「 ᴏᴛʜᴇʀ ꜱᴇᴛᴛɪɴɢꜱ 」**\n"
+            f"└ **Tutorial Link:** `{tutorial}`\n\n"
+            
             "Use the commands in `/help` to change these."
         )
         await bot.send_message(
             chat_id=chat_id,
             text=settings_text,
-            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⌫ Back", callback_data="start_menu")]])
-        )
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("✪ ꜱᴜᴘᴘᴏʀᴛ ɢʀᴏᴜᴘ ✪", url="https://t.me/Prime_Support_Group")],
+                [InlineKeyboardButton("⌫ Back", callback_data="start_menu")]
+            ])
+                            )
 
 @app.on_callback_query(filters.regex("refresh_check"))
 async def refresh_callback(bot, cq: CallbackQuery):
