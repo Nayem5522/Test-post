@@ -359,10 +359,18 @@ async def start_handler(bot, msg: Message):
     ]
     await msg.reply_photo(
         photo="https://i.postimg.cc/gjNQNCGK/IMG-20251104-062650-153.jpg",
-        caption=(
-            f"👋 Welcome, {msg.from_user.mention}!\n\n"
-            "I am an Advanced Post Generator Bot. I can help you create attractive posts for movies and series.\n\n"
-            "**To get started, simply send me a Movie or TV Series name!**"
+        caption = (
+            f"👋 ᴡᴇʟᴄᴏᴍᴇ, {cq.from_user.mention}!\n\n"
+            "🎬 ɪ’ᴍ ʏᴏᴜʀ **ᴀᴅᴠᴀɴᴄᴇᴅ ᴘᴏꜱᴛ ɢᴇɴᴇʀᴀᴛᴏʀ ʙᴏᴛ** — ʙᴜɪʟᴛ ᴛᴏ ᴄʀᴇᴀᴛᴇ ʙᴇᴀᴜᴛɪꜰᴜʟ ᴍᴏᴠɪᴇ & ꜱᴇʀɪᴇꜱ ᴘᴏꜱᴛꜱ ᴇꜰꜰᴏʀᴛʟᴇꜱꜱʟʏ!\n\n"
+            "✨ **ʜᴇʀᴇ’ꜱ ᴡʜᴀᴛ ɪ ᴄᴀɴ ᴅᴏ ꜰᴏʀ ʏᴏᴜ:**\n"
+            "1️⃣ **ꜱᴍᴀʀᴛ ᴀᴜᴛᴏ ᴘᴏꜱᴛ:**\n"
+            "   ᴊᴜꜱᴛ ꜱᴇɴᴅ ᴍᴇ ᴀ ᴍᴏᴠɪᴇ ᴏʀ ᴛᴠ ꜱᴇʀɪᴇꜱ ɴᴀᴍᴇ — ɪ’ʟʟ ꜰᴇᴛᴄʜ ᴀʟʟ ᴛʜᴇ ᴅᴇᴛᴀɪʟꜱ ᴀɴᴅ ɢᴇɴᴇʀᴀᴛᴇ ᴀ ꜱᴛᴜɴɴɪɴɢ ᴘᴏꜱᴛ ᴀᴜᴛᴏᴍᴀᴛɪᴄᴀʟʟʏ!\n\n"
+            "2️⃣ **Qᴜɪᴄᴋ ᴍᴀɴᴜᴀʟ ᴘᴏꜱᴛ:**\n"
+            "   ꜱᴇɴᴅ ᴍᴇ ᴀɴʏ ᴘʜᴏᴛᴏ ᴏʀ ᴠɪᴅᴇᴏ, ᴀɴᴅ ɪ’ʟʟ ʟᴇᴛ ʏᴏᴜ ᴄʜᴏᴏꜱᴇ ᴀ ᴄʜᴀɴɴᴇʟ ꜰʀᴏᴍ ʏᴏᴜʀ ʟɪꜱᴛ.\n"
+            "   ɪ’ʟʟ ɪɴꜱᴛᴀɴᴛʟʏ ᴘᴏꜱᴛ ɪᴛ ᴛʜᴇʀᴇ ᴡɪᴛʜ ʏᴏᴜʀ ᴄᴜꜱᴛᴏᴍ ʜᴇᴀᴅᴇʀ, ꜰᴏᴏᴛᴇʀ, ᴄᴀᴘᴛɪᴏɴ, ʙᴜᴛᴛᴏɴꜱ, ᴀɴᴅ ʀᴇᴀᴄᴛɪᴏɴꜱ!\n\n"
+            "💡 **ᴛʀʏ ɪᴛ ɴᴏᴡ:**\n"
+            "ꜱᴇɴᴅ ᴀ ᴍᴏᴠɪᴇ ɴᴀᴍᴇ ᴏʀ ᴀ ᴘʜᴏᴛᴏ/ᴠɪᴅᴇᴏ ᴛᴏ ɢᴇᴛ ꜱᴛᴀʀᴛᴇᴅ!\n\n"
+            "📢 @PrimeXBots — Your Creative Posting Assistant 💫"
         ),
         reply_markup=InlineKeyboardMarkup(buttons)
     )
@@ -967,9 +975,17 @@ async def navigation_handler(bot, cq: CallbackQuery):
             chat_id=chat_id,
             photo="https://i.postimg.cc/gjNQNCGK/IMG-20251104-062650-153.jpg",
             caption=(
-                f"👋 Welcome, {cq.from_user.mention}!\n\n"
-                "I am an Advanced Post Generator Bot. I can help you create attractive posts for movies and series.\n\n"
-                "**To get started, simply send me a Movie or TV Series name!**"
+                f"👋 ᴡᴇʟᴄᴏᴍᴇ, {cq.from_user.mention}!\n\n"
+                "🎬 ɪ’ᴍ ʏᴏᴜʀ **ᴀᴅᴠᴀɴᴄᴇᴅ ᴘᴏꜱᴛ ɢᴇɴᴇʀᴀᴛᴏʀ ʙᴏᴛ** — ʙᴜɪʟᴛ ᴛᴏ ᴄʀᴇᴀᴛᴇ ʙᴇᴀᴜᴛɪꜰᴜʟ ᴍᴏᴠɪᴇ & ꜱᴇʀɪᴇꜱ ᴘᴏꜱᴛꜱ ᴇꜰꜰᴏʀᴛʟᴇꜱꜱʟʏ!\n\n"
+                "✨ **ʜᴇʀᴇ’ꜱ ᴡʜᴀᴛ ɪ ᴄᴀɴ ᴅᴏ ꜰᴏʀ ʏᴏᴜ:**\n"
+                "1️⃣ **ꜱᴍᴀʀᴛ ᴀᴜᴛᴏ ᴘᴏꜱᴛ:**\n"
+                "   ᴊᴜꜱᴛ ꜱᴇɴᴅ ᴍᴇ ᴀ ᴍᴏᴠɪᴇ ᴏʀ ᴛᴠ ꜱᴇʀɪᴇꜱ ɴᴀᴍᴇ — ɪ’ʟʟ ꜰᴇᴛᴄʜ ᴀʟʟ ᴛʜᴇ ᴅᴇᴛᴀɪʟꜱ ᴀɴᴅ ɢᴇɴᴇʀᴀᴛᴇ ᴀ ꜱᴛᴜɴɴɪɴɢ ᴘᴏꜱᴛ ᴀᴜᴛᴏᴍᴀᴛɪᴄᴀʟʟʏ!\n\n"
+                "2️⃣ **Qᴜɪᴄᴋ ᴍᴀɴᴜᴀʟ ᴘᴏꜱᴛ:**\n"
+                "   ꜱᴇɴᴅ ᴍᴇ ᴀɴʏ ᴘʜᴏᴛᴏ ᴏʀ ᴠɪᴅᴇᴏ, ᴀɴᴅ ɪ’ʟʟ ʟᴇᴛ ʏᴏᴜ ᴄʜᴏᴏꜱᴇ ᴀ ᴄʜᴀɴɴᴇʟ ꜰʀᴏᴍ ʏᴏᴜʀ ʟɪꜱᴛ.\n"
+                "   ɪ’ʟʟ ɪɴꜱᴛᴀɴᴛʟʏ ᴘᴏꜱᴛ ɪᴛ ᴛʜᴇʀᴇ ᴡɪᴛʜ ʏᴏᴜʀ ᴄᴜꜱᴛᴏᴍ ʜᴇᴀᴅᴇʀ, ꜰᴏᴏᴛᴇʀ, ᴄᴀᴘᴛɪᴏɴ, ʙᴜᴛᴛᴏɴꜱ, ᴀɴᴅ ʀᴇᴀᴄᴛɪᴏɴꜱ!\n\n"
+                "💡 **ᴛʀʏ ɪᴛ ɴᴏᴡ:**\n"
+                "ꜱᴇɴᴅ ᴀ ᴍᴏᴠɪᴇ ɴᴀᴍᴇ ᴏʀ ᴀ ᴘʜᴏᴛᴏ/ᴠɪᴅᴇᴏ ᴛᴏ ɢᴇᴛ ꜱᴛᴀʀᴛᴇᴅ!\n\n"
+                "📢 @PrimeXBots — Your Creative Posting Assistant 💫"
             ),
             reply_markup=InlineKeyboardMarkup(buttons)
         )
