@@ -352,9 +352,10 @@ async def start_handler(bot, msg: Message):
             return await msg.reply_text("Sorry, there was an error creating the join link for the channel.")
 
     buttons = [
-        [InlineKeyboardButton("🎬 How to Create a Post", callback_data="create_post_help")],
-        [InlineKeyboardButton("⚙️ Settings", callback_data="settings_menu"), InlineKeyboardButton("📚 Help", callback_data="help_menu")],
-        [InlineKeyboardButton("👨‍💻 Developer", url="https://t.me/Prime_Nayem")]
+        [InlineKeyboardButton(" 🎬 ʜᴏᴡ ᴛᴏ ᴄʀᴇᴀᴛᴇ ᴀ ᴘᴏꜱᴛ", callback_data="create_post_help")],
+        [InlineKeyboardButton("✪ ꜱᴜᴘᴘᴏʀᴛ ɢʀᴏᴜᴘ", url="https://t.me/Prime_Support_group"), InlineKeyboardButton("〄 ᴜᴘᴅᴀᴛᴇs ᴄʜᴀɴɴᴇʟ", url="https://t.me/PrimeXBots")],
+        [InlineKeyboardButton("⚙️ ꜱᴇᴛᴛɪɴɢꜱ", callback_data="settings_menu"), InlineKeyboardButton("〆 ᴀʙᴏᴜᴛ 〆", callback_data="about_btn")],
+        [InlineKeyboardButton("✧ ᴄʀᴇᴀᴛᴏʀ ✧", url="https://t.me/Prime_Nayem")]
     ]
     await msg.reply_photo(
         photo="https://i.postimg.cc/gjNQNCGK/IMG-20251104-062650-153.jpg",
@@ -957,9 +958,10 @@ async def navigation_handler(bot, cq: CallbackQuery):
 
     if data == "start_menu":
         buttons = [
-            [InlineKeyboardButton("🎬 How to Create a Post", callback_data="create_post_help")],
-            [InlineKeyboardButton("⚙️ Settings", callback_data="settings_menu"), InlineKeyboardButton("📚 Help", callback_data="help_menu")],
-            [InlineKeyboardButton("👨‍💻 Developer", url="https://t.me/Prime_Nayem")]
+            [InlineKeyboardButton(" 🎬 ʜᴏᴡ ᴛᴏ ᴄʀᴇᴀᴛᴇ ᴀ ᴘᴏꜱᴛ", callback_data="create_post_help")],
+            [InlineKeyboardButton("✪ ꜱᴜᴘᴘᴏʀᴛ ɢʀᴏᴜᴘ", url="https://t.me/Prime_Support_group"), InlineKeyboardButton("〄 ᴜᴘᴅᴀᴛᴇs ᴄʜᴀɴɴᴇʟ", url="https://t.me/PrimeXBots")],
+            [InlineKeyboardButton("⚙️ ꜱᴇᴛᴛɪɴɢꜱ", callback_data="settings_menu"), InlineKeyboardButton("〆 ᴀʙᴏᴜᴛ 〆", callback_data="about_btn")],
+            [InlineKeyboardButton("✧ ᴄʀᴇᴀᴛᴏʀ ✧", url="https://t.me/Prime_Nayem")]
         ]
         await bot.send_photo(
             chat_id=chat_id,
@@ -1078,6 +1080,34 @@ async def navigation_handler(bot, cq: CallbackQuery):
             ])
                             )
 
+
+@app.on_callback_query(filters.regex("about_btn"))
+async def about_callback(bot, cq: CallbackQuery):
+    about_text = (
+        "<b>✦✗✦ <a href='https://t.me/PrimeXBots'>ᴍy ᴅᴇᴛᴀɪʟꜱ ʙy ᴘʀɪᴍᴇXʙᴏᴛs</a> ✦✗✦</b>\n\n"
+        "‣ ᴍʏ ɴᴀᴍᴇ : @Post_Generator_PrimeXBot\n"
+        "‣ ᴍʏ ʙᴇsᴛ ғʀɪᴇɴᴅ : <a href='tg://settings'>ᴛʜɪs ᴘᴇʀsᴏɴ</a>\n"
+        "‣ ᴅᴇᴠᴇʟᴏᴘᴇʀ : <a href='https://t.me/Prime_Nayem'>ᴍʀ.ᴘʀɪᴍᴇ</a>\n"
+        "‣ ᴜᴘᴅᴀᴛᴇꜱ ᴄʜᴀɴɴᴇʟ : <a href='https://t.me/PrimeXBots'>ᴘʀɪᴍᴇXʙᴏᴛꜱ</a>\n"
+        "‣ ᴍᴀɪɴ ᴄʜᴀɴɴᴇʟ : <a href='https://t.me/PrimeCineZone'>Pʀɪᴍᴇ Cɪɴᴇᴢᴏɴᴇ</a>\n"
+        "‣ ѕᴜᴘᴘᴏʀᴛ ɢʀᴏᴜᴘ : <a href='https://t.me/Prime_Support_group'>ᴘʀɪᴍᴇ X ѕᴜᴘᴘᴏʀᴛ</a>\n"
+        "‣ ᴅᴀᴛᴀ ʙᴀsᴇ : <a href='https://www.mongodb.com/'>ᴍᴏɴɢᴏ ᴅʙ</a>\n"
+        "‣ ʙᴏᴛ sᴇʀᴠᴇʀ : <a href='https://heroku.com'>ʜᴇʀᴏᴋᴜ</a>\n"
+        "‣ ʙᴜɪʟᴅ sᴛᴀᴛᴜs : ᴠ2.7.1 [sᴛᴀʙʟᴇ]"
+    )
+    
+    await bot.send_message(
+        chat_id=chat_id,
+        text=about_text,
+        disable_web_page_preview=True,
+        parse_mode=enums.ParseMode.HTML,
+        reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("✪ ꜱᴜᴘᴘᴏʀᴛ ɢʀᴏᴜᴘ ✪", url="https://t.me/Prime_Support_Group")],
+                [InlineKeyboardButton("⌫ Back", callback_data="start_menu")]
+            ])
+    )
+    
+    
 @app.on_callback_query(filters.regex("refresh_check"))
 async def refresh_callback(bot, cq: CallbackQuery):
     if await is_subscribed(bot, cq.from_user.id):
