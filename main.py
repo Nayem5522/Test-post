@@ -89,6 +89,25 @@ logger.info("🚀 Flask web server started.")
 # 🔹 Helper Functions
 # ---------------------------------------------------------------------------
 
+async def loading_animation(message: Message, stop_event: asyncio.Event):
+    """
+    Edits a message repeatedly to show a spinning animation until the stop_event is set.
+    """
+    # এই ক্যারেক্টারগুলো একটি সুন্দর স্পিনিং অ্যানিমেশন তৈরি করে
+    animation_frames = ["⢿", "⣻", "⣽", "⣾", "⣷", "⣯", "⣟", "⡿"]
+    idx = 0
+    original_text = "Please wait, checking your channels..."
+    
+    while not stop_event.is_set():
+        try:
+            # অ্যানিমেশন ফ্রেম এবং টেক্সট একসাথে দেখানো হচ্ছে
+            await message.edit_text(f"{animation_frames[idx]} {original_text}")
+            idx = (idx + 1) % len(animation_frames)
+            await asyncio.sleep(0.2)  # প্রতি ০.২ সেকেন্ড পর পর ফ্রেম পরিবর্তন হবে
+        except Exception:
+            # যদি মেসেজ এডিট করতে কোনো সমস্যা হয় (যেমন ব্যবহারকারী মেসেজ ডিলিট করে দিলে), লুপ ব্রেক হবে
+            break
+
 async def is_subscribed(bot: Client, user_id: int):
     try:
         await bot.get_chat_member(AUTH_CHANNEL, user_id)
@@ -611,7 +630,6 @@ async def generate_final_post_preview(bot, uid, chat_id, status_msg: Message):
     await status_msg.edit_text("🖼️ Generating smart poster...")
     poster_url = f"https://image.tmdb.org/t/p/w500{convo['details']['poster_path']}" if convo['details'].get('poster_path') else None
     
-    # Use the one-time badge if it exists
     badge_text = user_conversations.get(uid, {}).pop('temp_badge_text', None)
     watermark = user_data.get('watermark_text')
     
@@ -622,7 +640,6 @@ async def generate_final_post_preview(bot, uid, chat_id, status_msg: Message):
     await status_msg.edit_text("📝 Generating caption and buttons...")
     caption = await generate_channel_caption(convo, user_data)
     
-    # --- ADD THIS BLOCK ---
     if len(caption) > 1024:
         error_msg = (
             "❌ **Caption Too Long!**\n\n"
@@ -633,7 +650,7 @@ async def generate_final_post_preview(bot, uid, chat_id, status_msg: Message):
         if uid in user_conversations:
             del user_conversations[uid]
         return
-    # --- END OF BLOCK ---
+
     inline_keyboard = [
         [InlineKeyboardButton("👍 0", callback_data="react_DUMMY_like"), InlineKeyboardButton("❤️ 0", callback_data="react_DUMMY_love")]
     ]
@@ -655,25 +672,44 @@ async def generate_final_post_preview(bot, uid, chat_id, status_msg: Message):
         reply_markup=InlineKeyboardMarkup(inline_keyboard)
     )
     
-    saved_channels = [ch for ch in user_data.get('channels', []) if await ensure_bot_admin_rights(bot, ch['id'])]
-    
-    if saved_channels:
-        channel_buttons = [[InlineKeyboardButton(f"📢 Post to {ch['title']}", callback_data=f"postto_{ch['id']}")] for ch in saved_channels]
-        channel_buttons.append([InlineKeyboardButton("❌ Cancel", callback_data="cancel_process")])
-        await preview_msg.reply_text(
-            "**👆 This is a preview. Choose a channel to post:**",
-            reply_markup=InlineKeyboardMarkup(channel_buttons)
-        )
-    else:
-        convo['state'] = 'awaiting_forward_for_post'
-        await preview_msg.reply_text(
-            "✅ **Preview generated!**\n\n"
-            "You have no channels saved where I have admin rights.\n\n"
-            "**To post this, please:**\n"
-            "1. Make me an admin in your desired channel.\n"
-            "2. Forward any message from that channel to me.\n\n"
-            "I will automatically post this content there."
-        )
+    # --- অ্যানিমেশনসহ নতুন পরিবর্তন ---
+    channel_status_msg = await preview_msg.reply_text("⏳ Please wait...")
+    stop_event = asyncio.Event()
+    animation_task = asyncio.create_task(loading_animation(channel_status_msg, stop_event))
+
+    try:
+        saved_channels = []
+        if user_data.get('channels'):
+            for ch in user_data.get('channels', []):
+                if await ensure_bot_admin_rights(bot, ch['id']):
+                    saved_channels.append(ch)
+        
+        # --- মূল কাজ শেষ, এখন অ্যানিমেশন বন্ধ করা হবে ---
+        stop_event.set()
+        await animation_task
+
+        if saved_channels:
+            channel_buttons = [[InlineKeyboardButton(f"📢 Post to {ch['title']}", callback_data=f"postto_{ch['id']}")] for ch in saved_channels]
+            channel_buttons.append([InlineKeyboardButton("❌ Cancel", callback_data="cancel_process")])
+            await channel_status_msg.edit_text(
+                "**👆 This is a preview. Choose a channel to post:**",
+                reply_markup=InlineKeyboardMarkup(channel_buttons)
+            )
+        else:
+            convo['state'] = 'awaiting_forward_for_post'
+            await channel_status_msg.edit_text(
+                "✅ **Preview generated!**\n\n"
+                "You have no channels saved where I have admin rights.\n\n"
+                "**To post this, please:**\n"
+                "1. Make me an admin in your desired channel.\n"
+                "2. Forward any message from that channel to me.\n\n"
+                "I will automatically post this content there."
+            )
+    except Exception as e:
+        logger.error(f"Error during channel check in preview: {e}")
+        stop_event.set()
+        await animation_task
+        await channel_status_msg.edit_text("❌ An unexpected error occurred while checking channels.")
 
 # ========================= 🧩 BLOCK 2: generate_channel_caption() =========================
 
@@ -800,39 +836,51 @@ async def post_to_channel_callback(bot, cq: CallbackQuery):
 @app.on_message(filters.private & (filters.photo | filters.video) & ~filters.forwarded)
 async def direct_media_handler(bot, msg: Message):
     uid = msg.from_user.id
-    # যদি ব্যবহারকারী অন্য কোনো কনভারসেশনে থাকেন, তাহলে এই ফাংশন কাজ করবে না
     if uid in user_conversations and user_conversations[uid].get('state') not in [None, "awaiting_forward_for_post"]:
         return
 
-    user = await users_collection.find_one({"user_id": uid})
-    
-    # ব্যবহারকারীর সেভ করা চ্যানেলগুলোতে বট অ্যাডমিন আছে কিনা তা পরীক্ষা করা হচ্ছে
-    buttons = []
-    if user and user.get("channels"):
-        for ch in user["channels"]:
-            if await ensure_bot_admin_rights(bot, ch['id']):
-                buttons.append([InlineKeyboardButton(ch["title"], callback_data=f"sendto_{msg.id}_{ch['id']}")])
+    # --- অ্যানিমেশনসহ নতুন পরিবর্তন ---
+    status_msg = await msg.reply_text("⏳ Please wait...")
+    stop_event = asyncio.Event()
+    animation_task = asyncio.create_task(loading_animation(status_msg, stop_event))
 
-    # যদি কোনো চ্যানেলে অ্যাডমিন অ্যাক্সেস না থাকে বা কোনো চ্যানেলই সেভ করা না থাকে
-    if not buttons:
-        # বট ব্যবহারকারীর ছবির মেসেজ আইডি মনে রাখবে
-        user_conversations[uid] = {
-            "state": "awaiting_forward_for_direct_media",
-            "media_message_id": msg.id
-        }
-        # ব্যবহারকারীকে চ্যানেল থেকে ফরোয়ার্ড করার জন্য নির্দেশনা দেওয়া হবে
-        return await msg.reply_text(
-            "✅ **Media received!**\n\n"
-            "You have no channels saved where I have admin rights.\n\n"
-            "**To post this, please:**\n"
-            "1. Make me an admin in your desired channel.\n"
-            "2. Forward any message from that channel to me.\n\n"
-            "I will automatically post this media there."
-        )
+    try:
+        user = await users_collection.find_one({"user_id": uid})
+        
+        buttons = []
+        if user and user.get("channels"):
+            for ch in user["channels"]:
+                if await ensure_bot_admin_rights(bot, ch['id']):
+                    buttons.append([InlineKeyboardButton(ch["title"], callback_data=f"sendto_{msg.id}_{ch['id']}")])
 
-    # যদি অ্যাডমিন অ্যাক্সেসসহ চ্যানেল পাওয়া যায়, তাহলে বাটন দেখানো হবে
-    await msg.reply_text("📤 **Choose a channel to post this media to:**", reply_markup=InlineKeyboardMarkup(buttons))
-
+        # --- মূল কাজ শেষ, এখন অ্যানিমেশন বন্ধ করা হবে ---
+        stop_event.set()
+        await animation_task
+        
+        if not buttons:
+            user_conversations[uid] = {
+                "state": "awaiting_forward_for_direct_media",
+                "media_message_id": msg.id
+            }
+            await status_msg.edit_text(
+                "✅ **Media received!**\n\n"
+                "You have no channels saved where I have admin rights.\n\n"
+                "**To post this, please:**\n"
+                "1. Make me an admin in your desired channel.\n"
+                "2. Forward any message from that channel to me.\n\n"
+                "I will automatically post this media there."
+            )
+        else:
+            await status_msg.edit_text(
+                "📤 **Choose a channel to post this media to:**",
+                reply_markup=InlineKeyboardMarkup(buttons)
+            )
+    except Exception as e:
+        logger.error(f"Error in direct media handler: {e}")
+        stop_event.set()
+        await animation_task
+        await status_msg.edit_text("❌ An unexpected error occurred.")
+        
 async def post_direct_media_to_channel(bot: Client, user_id: int, channel_id: int, media_msg_id: int, status_message: Message):
     """Helper function to post a direct media message to a channel."""
     if not await ensure_bot_admin_rights(bot, channel_id):
@@ -891,75 +939,25 @@ async def post_direct_media_to_channel(bot: Client, user_id: int, channel_id: in
 
 @app.on_callback_query(filters.regex("^sendto_"))
 async def direct_media_post_callback(bot, cq: CallbackQuery):
+    # ব্যবহারকারীকে জানানো হচ্ছে যে পোস্ট করার প্রক্রিয়া শুরু হয়েছে
     await cq.answer("✅ Posting...", show_alert=False)
-    _, msg_id, channel_id = cq.data.split("_")
-    msg_id, channel_id = int(msg_id), int(channel_id)
-    user_id = cq.from_user.id
-
-    await post_direct_media_to_channel(bot, user_id, channel_id, msg_id, cq.message)
-
-    if not await ensure_bot_admin_rights(bot, channel_id):
-        return await cq.message.edit_text("❌ Bot is not an admin or lacks 'Post Messages' permission!")
-
+    
     try:
-        media_msg = await bot.get_messages(user_id, msg_id)
-        user_data = await users_collection.find_one({"user_id": user_id}) or {}
-        
-        # --- নতুন নিয়মে ক্যাপশন একত্রিত করা ---
-        caption_parts = []
-        if user_data.get("custom_header"):
-            caption_parts.append(user_data["custom_header"])
-            
-        if media_msg.caption:
-            caption_parts.append(media_msg.caption.html)
-            
-        if user_data.get("custom_caption"):
-            caption_parts.append(user_data["custom_caption"])
-        
-        if user_data.get('tutorial_link'):
-            tutorial_url = user_data['tutorial_link']
-            tutorial_text = (
-                "╭━❰📚 ʜᴏᴡ ᴛᴏ ᴏᴘᴇɴ ʟɪɴᴋꜱ ᴛᴜᴛᴏʀɪᴀʟ ❱━⊱\n"
-                f"┃    <a href='{tutorial_url}'>📥 𝗪𝗔𝗧𝗖𝗛 𝗧𝗨𝗧𝗢𝗥𝗜𝗔𝗟 𝗡𝗢𝗪 ▶️</a>\n"
-                "╰━━━━━━━━━━━━━━━━⊱"
-            )
-            caption_parts.append(tutorial_text)
+        # কলব্যাক ডেটা থেকে মেসেজ আইডি এবং চ্যানেল আইডি নেওয়া হচ্ছে
+        _, msg_id, channel_id = cq.data.split("_")
+        msg_id, channel_id = int(msg_id), int(channel_id)
+        user_id = cq.from_user.id
 
-        if user_data.get("custom_footer"):
-            caption_parts.append(user_data["custom_footer"])
-
-        final_caption = "\n\n".join(caption_parts)
-
-        # --- ক্যাপশন লিমিট চেক ---
-        if len(final_caption) > 1024:
-            error_msg = (
-                "❌ **Caption Too Long!**\n\n"
-                f"Your final caption is **{len(final_caption)}** characters long (limit is 1024).\n\n"
-                "Please shorten your original caption, `/setheader`, or `/setfooter`."
-            )
-            return await cq.message.edit_text(error_msg)
-
-        # --- বাটন প্রস্তুত করা ---
-        all_buttons = [
-            [InlineKeyboardButton("👍 0", callback_data="react_DUMMY_like"), InlineKeyboardButton("❤️ 0", callback_data="react_DUMMY_love")]
-        ]
-        for btn in user_data.get("custom_buttons", []):
-            all_buttons.append([InlineKeyboardButton(btn["text"], url=btn["url"])])
-        
-        # পোস্ট এবং আপডেট
-        copied_msg = await media_msg.copy(chat_id=channel_id, caption=final_caption)
-        await reactions_collection.insert_one({"message_id": copied_msg.id, "chat_id": channel_id, "reactions": {"like": [], "love": []}})
-        
-        all_buttons[0][0].callback_data = f"react_{copied_msg.id}_like"
-        all_buttons[0][1].callback_data = f"react_{copied_msg.id}_love"
-
-        await copied_msg.edit_reply_markup(reply_markup=InlineKeyboardMarkup(all_buttons))
-        await cq.message.edit_text("✅ Successfully posted!")
+        # এখন শুধুমাত্র 'post_direct_media_to_channel' ফাংশনটি কল করা হবে।
+        # মিডিয়া পোস্ট করার সমস্ত লজিক এই একটি ফাংশনেই রয়েছে।
+        # এটি অ্যাডমিন রাইটস চেক করা থেকে শুরু করে পোস্ট করা এবং স্ট্যাটাস মেসেজ এডিট করা পর্যন্ত সব কাজ করবে।
+        await post_direct_media_to_channel(bot, user_id, channel_id, msg_id, cq.message)
 
     except Exception as e:
-        logger.error(f"Failed to post direct media: {e}")
-        await cq.message.edit_text(f"❌ Failed to post. Error: {e}")
-
+        # যদি কোনো কারণে পুরো প্রক্রিয়াতে সমস্যা হয়, তাহলে সেটি লগ করা হবে এবং ব্যবহারকারীকে জানানো হবে।
+        logger.error(f"Error in direct media callback: {e}")
+        await cq.message.edit_text(f"❌ An unexpected error occurred: {e}")
+        
 @app.on_message(filters.private & filters.forwarded)
 async def forward_handler(bot, msg: Message):
     if not msg.forward_from_chat or msg.forward_from_chat.type != enums.ChatType.CHANNEL:
