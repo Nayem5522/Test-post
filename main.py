@@ -445,16 +445,26 @@ async def post_creation_entry(bot, msg: Message):
         return
 
     convo = user_conversations.get(uid)
-    # If the user is in an active conversation (i.e., the bot is waiting for input like a link or season number)
-    if convo and convo.get("state") not in [None, "awaiting_forward_for_post", "generating_post"]:
-        return await conversation_handler(bot, msg)
 
-    # If there's no active conversation or the last state was just waiting for a post action,
-    # treat this message as a new search, cancelling the old state.
-    if uid in user_conversations:
-        logger.info(f"User {uid} is starting a new search, clearing previous final post/preview state.")
-        del user_conversations[uid]
+    # --- New gatekeeper logic starts ---
+    if convo:
+        # If the user is in a state that requires input (like a link or season number), let conversation_handler manage it.
+        if convo.get("state") and convo["state"] not in ["awaiting_forward_for_post", "generating_post"]:
+            return await conversation_handler(bot, msg)
+        
+        # If a post preview is already shown to the user (i.e., there is an unfinished task).
+        else:
+            await msg.reply_text(
+                "⚠️ **You have an unfinished task!**\n\n"
+                "You have already created a post that has not yet been sent to a channel. Please complete the previous task or cancel it using the button below.",
+                reply_markup=InlineKeyboardMarkup(
+                    [[InlineKeyboardButton("❌ Cancel Previous Task", callback_data="cancel_process")]]
+                )
+            )
+            return # Stop the new post creation process here.
+    # --- New gatekeeper logic ends ---
     
+    # If there are no unfinished tasks, the new post creation process will continue normally.
     processing_msg = await msg.reply_text(f"🔍 Searching for `{query}`...")
     
     loop = asyncio.get_running_loop()
@@ -472,7 +482,6 @@ async def post_creation_entry(bot, msg: Message):
     
     buttons.append([InlineKeyboardButton("❌ Cancel", callback_data="cancel_process")])
     
-    # স্ট্যাটাস অনুযায়ী মেসেজ পরিবর্তন করা হবে
     if status == 'DIRECT':
         await processing_msg.edit_text("**👇 Choose from the results:**", reply_markup=InlineKeyboardMarkup(buttons))
     elif status == 'SUGGESTIONS':
@@ -1209,6 +1218,27 @@ async def navigation_handler(bot, cq: CallbackQuery):
                 [InlineKeyboardButton("⌫ Back", callback_data="start_menu")]
             ])
                             )
+
+@app.on_callback_query(filters.regex("cancel_process"))
+async def cancel_process_handler(bot: Client, cq: CallbackQuery):
+    """
+    Handles the cancellation of any ongoing user process.
+    Clears the user's session from user_conversations.
+    """
+    uid = cq.from_user.id
+    
+    # Check if a conversation exists and delete it
+    if uid in user_conversations:
+        del user_conversations[uid]
+        
+    # Notify the user with a pop-up alert
+    await cq.answer("Process Cancelled!", show_alert=True)
+    
+    # Edit the message to provide clear confirmation
+    await cq.message.edit_text(
+        "✅ **All unfinished tasks have been cancelled.**\n\n"
+        "You can now start creating a new post."
+    )
 
 # ===================================================================
 # 🔹 About Bot Handler (New Separate Function)
