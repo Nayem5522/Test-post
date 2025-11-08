@@ -741,7 +741,6 @@ async def generate_channel_caption(convo: dict, user_data: dict):
     links = convo["links"]
     is_tv = "first_air_date" in data
 
-    # --- Get Header and Footer ---
     custom_header = user_data.get('custom_header')
     custom_footer = user_data.get('custom_footer')
 
@@ -766,13 +765,11 @@ async def generate_channel_caption(convo: dict, user_data: dict):
     download_section_header = "📦 **Download Links** 📦"
     download_links = ""
     
-    # This threshold will be used for both movies and series
     LINK_LENGTH_THRESHOLD = 32
 
-    # ========== TV Series Section (With New Conditional Logic) ==========
+    # ========== TV Series Section (With New Short Link Format) ==========
     if is_tv:
         tv_links = []
-        # Sorts links by season, then episode (e.g., 1, 1x1, 1x2, 2)
         sorted_keys = sorted(links.keys(), key=lambda k: tuple(map(int, k.split('x'))) if 'x' in k else (int(k), -1))
         
         for key in sorted_keys:
@@ -780,35 +777,37 @@ async def generate_channel_caption(convo: dict, user_data: dict):
             if not link:
                 continue
 
-            is_episode = 'x' in key
-            
-            # Prepare labels and emoji based on whether it's a season or an episode
-            if is_episode:
-                emoji = "🎬"
-                s, e = key.split('x')
-                # For hyperlinks: "Download S01 E05"
-                hyperlink_label = f"Download S{s.zfill(2)} E{e.zfill(2)}"
-                # For direct links: "S01 E05:"
-                direct_label = f"S{s.zfill(2)} E{e.zfill(2)}:"
-            else: # It's a full season
-                emoji = "📁"
-                # For hyperlinks: "Download Season 1"
-                hyperlink_label = f"Download Season {key}"
-                # For direct links: "Season 1:"
-                direct_label = f"Season {key}:"
-
-            # --- Apply the conditional formatting ---
+            # --- Logic for Long Links (Unchanged) ---
             if len(link) > LINK_LENGTH_THRESHOLD:
+                is_episode = 'x' in key
+                if is_episode:
+                    emoji = "🎬"
+                    s, e = key.split('x')
+                    hyperlink_label = f"Download S{s.zfill(2)} E{e.zfill(2)}"
+                else:
+                    emoji = "📁"
+                    hyperlink_label = f"Download Season {key}"
                 formatted_line = f"{emoji} [{hyperlink_label}]({link})"
+            
+            # --- New Logic for Short Links (As per your request) ---
             else:
-                formatted_line = f"{emoji} **{direct_label}** `{link}`"
+                is_episode = 'x' in key
+                if is_episode:
+                    s, e = key.split('x')
+                    # Using "Session" as you requested in the example
+                    label = f"Session {s} Episode {e}"
+                else:
+                    label = f"Session {key}"
+                
+                # Creates the two-line, clickable format
+                formatted_line = f"📁 {label}\n🔗 {link}"
             
             tv_links.append(formatted_line)
         
-        # Join with a single newline for a compact list
-        download_links = "\n".join(tv_links)
+        # Use a double newline to separate each two-line block
+        download_links = "\n\n".join(tv_links)
 
-    # ========== Movie Section (With Conditional Logic) ==========
+    # ========== Movie Section (With New Short Link Format) ==========
     else:
         movie_links = []
         for quality in ["480p", "720p", "1080p"]:
@@ -816,28 +815,32 @@ async def generate_channel_caption(convo: dict, user_data: dict):
             if not link:
                 continue
             
-            emoji = "🎞️" if quality == "480p" else "📺" if quality == "720p" else "🎥"
-            
+            # --- Logic for Long Links (Unchanged) ---
             if len(link) > LINK_LENGTH_THRESHOLD:
+                emoji = "🎞️" if quality == "480p" else "📺" if quality == "720p" else "🎥"
                 formatted_line = f"{emoji} [Download {quality}]({link})"
+            
+            # --- New Logic for Short Links (As per your request) ---
             else:
-                formatted_line = f"{emoji} **{quality}:** `{link}`"
+                # Creates the two-line, clickable format
+                label = quality.upper()
+                formatted_line = f"📁 {label}\n🔗 {link}"
             
             movie_links.append(formatted_line)
         
-        download_links = "\n".join(movie_links)
+        # Use a double newline to create space between each entry
+        download_links = "\n\n".join(movie_links)
 
-    # --- Tutorial section (optional) ---
+    # --- Tutorial section and final merge (Unchanged) ---
     tutorial_section = ""
     if user_data.get('tutorial_link'):
         tutorial_url = user_data['tutorial_link']
         tutorial_section = (
             "╭━❰📚 ʜᴏᴡ ᴛᴏ ᴏᴘᴇɴ ʟɪɴᴋꜱ ᴛᴜᴛᴏʀɪᴀʟ ❱━⊱\n"
-            f"┃    <a href='{tutorial_url}'>📥 𝗪𝗔𝗧𝗖𝗛 𝗧𝗨𝗧𝗢𝗥𝗜𝗔𝗟 𝗡𝗢𝗪 ▶️</a>\n"
+            f"┃    <a href='{tutorial_url}'>📥 𝗪𝗔𝗧𝗖𝗛 𝗧𝗨𝗧ᴏʀɪᴀʟ ɴᴏᴡ ▶️</a>\n"
             "╰━━━━━━━━━━━━━━━━⊱"
         )
     
-    # --- Final caption merge ---
     final_parts = []
     if custom_header:
         final_parts.append(custom_header)
@@ -1586,7 +1589,7 @@ async def settings_commands(bot: Client, msg: Message):
             await users_collection.update_one({"user_id": user_id}, {"$set": {"shortener_url": clean_value}}, upsert=True)
             await msg.reply_text(f"✅ Shortener domain set to: `{clean_value}`")
         else:
-            await msg.reply_text("⚠️ **Usage:** `/setdomain [yourdomain.com]`\n\nTo remove your domain, use `/deldomain`.")
+            await msg.reply_text("⚠️ **Usage:** `/setdomain [https://yourdomain.com]`\n\nTo remove your domain, use `/deldomain`.")
             
     elif command == "deldomain":
         await users_collection.update_one({"user_id": user_id}, {"$unset": {"shortener_url": ""}})
