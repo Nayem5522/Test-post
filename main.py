@@ -736,7 +736,6 @@ async def generate_final_post_preview(bot, uid, chat_id, status_msg: Message):
         await channel_status_msg.edit_text("❌ An unexpected error occurred while checking channels.")
 
 # ========================= 🧩 BLOCK 2: generate_channel_caption() =========================
-
 async def generate_channel_caption(convo: dict, user_data: dict):
     data = convo["details"]
     links = convo["links"]
@@ -766,26 +765,66 @@ async def generate_channel_caption(convo: dict, user_data: dict):
 
     download_section_header = "📦 **Download Links** 📦"
     download_links = ""
+    
+    # This threshold will be used for both movies and series
+    LINK_LENGTH_THRESHOLD = 32
 
-    # ... (rest of the link generation logic remains the same) ...
-    # ========== TV Series Section ==========
+    # ========== TV Series Section (With New Conditional Logic) ==========
     if is_tv:
         tv_links = []
+        # Sorts links by season, then episode (e.g., 1, 1x1, 1x2, 2)
         sorted_keys = sorted(links.keys(), key=lambda k: tuple(map(int, k.split('x'))) if 'x' in k else (int(k), -1))
+        
         for key in sorted_keys:
-            link = links[key]
-            if not link: continue
-            display_label = f"Season {key.replace('x', ' Episode ')}"
-            tv_links.append(f"📁 **{display_label}**\n🔗 {link}")
-        download_links = "\n\n".join(tv_links)
-    # ========== Movie Section ==========
+            link = links.get(key)
+            if not link:
+                continue
+
+            is_episode = 'x' in key
+            
+            # Prepare labels and emoji based on whether it's a season or an episode
+            if is_episode:
+                emoji = "🎬"
+                s, e = key.split('x')
+                # For hyperlinks: "Download S01 E05"
+                hyperlink_label = f"Download S{s.zfill(2)} E{e.zfill(2)}"
+                # For direct links: "S01 E05:"
+                direct_label = f"S{s.zfill(2)} E{e.zfill(2)}:"
+            else: # It's a full season
+                emoji = "📁"
+                # For hyperlinks: "Download Season 1"
+                hyperlink_label = f"Download Season {key}"
+                # For direct links: "Season 1:"
+                direct_label = f"Season {key}:"
+
+            # --- Apply the conditional formatting ---
+            if len(link) > LINK_LENGTH_THRESHOLD:
+                formatted_line = f"{emoji} [{hyperlink_label}]({link})"
+            else:
+                formatted_line = f"{emoji} **{direct_label}** `{link}`"
+            
+            tv_links.append(formatted_line)
+        
+        # Join with a single newline for a compact list
+        download_links = "\n".join(tv_links)
+
+    # ========== Movie Section (With Conditional Logic) ==========
     else:
         movie_links = []
         for quality in ["480p", "720p", "1080p"]:
             link = links.get(quality)
-            if not link: continue
+            if not link:
+                continue
+            
             emoji = "🎞️" if quality == "480p" else "📺" if quality == "720p" else "🎥"
-            movie_links.append(f"{emoji} [Download {quality}]({link})")
+            
+            if len(link) > LINK_LENGTH_THRESHOLD:
+                formatted_line = f"{emoji} [Download {quality}]({link})"
+            else:
+                formatted_line = f"{emoji} **{quality}:** `{link}`"
+            
+            movie_links.append(formatted_line)
+        
         download_links = "\n".join(movie_links)
 
     # --- Tutorial section (optional) ---
@@ -814,6 +853,7 @@ async def generate_channel_caption(convo: dict, user_data: dict):
         final_parts.append(custom_footer)
 
     return "\n\n".join(final_parts)
+
 
 async def post_to_channel(bot: Client, user_id: int, channel_id: int, status_message: Message):
     convo = user_conversations.get(user_id)
