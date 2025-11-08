@@ -91,21 +91,25 @@ logger.info("🚀 Flask web server started.")
 
 async def loading_animation(message: Message, stop_event: asyncio.Event):
     """
-    Edits a message repeatedly to show a spinning animation until the stop_event is set.
+    Edits a message repeatedly to show a large clock animation until the stop_event is set.
     """
-    # এই ক্যারেক্টারগুলো একটি সুন্দর স্পিনিং অ্যানিমেশন তৈরি করে
-    animation_frames = ["⢿", "⣻", "⣽", "⣾", "⣷", "⣯", "⣟", "⡿"]
+    # এই ঘড়ির ইমোগুলো একটি চমৎকার ঘুরন্ত অ্যানিমেশন তৈরি করে
+    animation_frames = ["🕐", "🕑", "🕒", "🕓", "🕔", "🕕", "🕖", "🕗", "🕘", "🕙", "🕚", "🕛"]
     idx = 0
-    original_text = "Please wait, checking your channels..."
+    text = "⏳ Please wait, checking your channels..."
     
     while not stop_event.is_set():
         try:
-            # অ্যানিমেশন ফ্রেম এবং টেক্সট একসাথে দেখানো হচ্ছে
-            await message.edit_text(f"{animation_frames[idx]} {original_text}")
+            # অ্যানিমেশন ফ্রেমটি বড় করে দেখানোর জন্য এটিকে আলাদা লাইনে রাখা হয়েছে
+            # এবং টেক্সটটি দুটি নতুন লাইনের পর শুরু হয়েছে
+            display_text = f"{animation_frames[idx]}\n\n{text}"
+            
+            await message.edit_text(display_text)
             idx = (idx + 1) % len(animation_frames)
-            await asyncio.sleep(0.2)  # প্রতি ০.২ সেকেন্ড পর পর ফ্রেম পরিবর্তন হবে
+            await asyncio.sleep(0.3)  # অ্যানিমেশনটি আরেকটু ধীর এবং মসৃণ করার জন্য সময় বাড়ানো হলো
+            
         except Exception:
-            # যদি মেসেজ এডিট করতে কোনো সমস্যা হয় (যেমন ব্যবহারকারী মেসেজ ডিলিট করে দিলে), লুপ ব্রেক হবে
+            # যদি মেসেজ এডিট করতে কোনো সমস্যা হয়, লুপ বন্ধ হয়ে যাবে
             break
 
 async def is_subscribed(bot: Client, user_id: int):
