@@ -1589,7 +1589,7 @@ async def settings_commands(bot: Client, msg: Message):
             await users_collection.update_one({"user_id": user_id}, {"$set": {"shortener_url": clean_value}}, upsert=True)
             await msg.reply_text(f"✅ Shortener domain set to: `{clean_value}`")
         else:
-            await msg.reply_text("⚠️ **Usage:** `/setdomain [https://yourdomain.com]`\n\nTo remove your domain, use `/deldomain`.")
+            await msg.reply_text("⚠️ **Usage:** `/setdomain [yourdomain.com]`\n\nTo remove your domain, use `/deldomain`.")
             
     elif command == "deldomain":
         await users_collection.update_one({"user_id": user_id}, {"$unset": {"shortener_url": ""}})
