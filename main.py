@@ -6,6 +6,7 @@
 import os
 import io
 import re
+from os import environ
 import logging
 import threading
 import asyncio
@@ -25,6 +26,7 @@ from thefuzz import fuzz
 from pyrogram import Client, filters, enums
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 from pyrogram.errors import UserNotParticipant, ChatAdminRequired
+from pyrogram.errors import *
 from motor.motor_asyncio import AsyncIOMotorClient
 
 # --- Web Server (for Keep-Alive) ---
@@ -38,6 +40,8 @@ load_dotenv()
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
+id_pattern = re.compile(r'^.\d+$')
+
 # --- Bot & API Configuration ---
 API_ID = int(os.environ.get("API_ID", "12345"))
 API_HASH = os.environ.get("API_HASH", "your_api_hash")
@@ -46,7 +50,9 @@ MONGO_URL = os.environ.get("MONGO_URL", "your_mongodb_url")
 TMDB_API_KEY = os.environ.get("TMDB_API_KEY", "your_tmdb_api_key")
 
 # --- Channel & Owner Information ---
-AUTH_CHANNEL = int(os.environ.get("AUTH_CHANNEL", "-1001234567890"))
+AUTH_CHANNEL = [int(ch) if id_pattern.search(ch) else ch for ch in environ.get('AUTH_CHANNEL', '').split()] 
+# give channel id with separate space. Ex: ('-10073828 -102782829 -1007282828')
+
 OWNER_ID = int(os.environ.get("OWNER_ID", "5926160191"))
 
 # ---------------------------------------------------------------------------
@@ -111,6 +117,18 @@ async def loading_animation(message: Message, stop_event: asyncio.Event):
         except Exception:
             # যদি মেসেজ এডিট করতে কোনো সমস্যা হয়, লুপ বন্ধ হয়ে যাবে
             break
+
+async def is_subscribedp(bot, query, channel):
+    btn = []
+    for id in channel:
+        chat = await bot.get_chat(int(id))
+        try:
+            await bot.get_chat_member(id, query.from_user.id)
+        except UserNotParticipant:
+            btn.append([InlineKeyboardButton(f"✇ Join {chat.title} ✇", url=chat.invite_link)]) #✇ ᴊᴏɪɴ ᴏᴜʀ ᴜᴘᴅᴀᴛᴇꜱ ᴄʜᴀɴɴᴇʟ ✇
+        except Exception as e:
+            pass
+    return btn
 
 async def is_subscribed(bot: Client, user_id: int):
     try:
@@ -359,33 +377,29 @@ async def watermark_poster(poster_url: str, watermark_text: str, badge_text: str
 # ---------------------------------------------------------------------------
 @app.on_message(filters.private & filters.command("start"))
 async def start_handler(bot, msg: Message):
-    if not await is_subscribed(bot, msg.from_user.id):
+    if AUTH_CHANNEL:
         try:
-            chat = await bot.get_chat(AUTH_CHANNEL)
-            invite_link = chat.invite_link or await bot.export_chat_invite_link(AUTH_CHANNEL)
-            btns = [
-                [InlineKeyboardButton(f"✇ Join {chat.title} ✇", url=invite_link)],
-                [InlineKeyboardButton("🔄 Refresh", callback_data="refresh_check")]
-            ]
-            return await msg.reply_photo(
-                photo="https://i.postimg.cc/xdkd1h4m/IMG-20250715-153124-952.jpg",
-                caption=f"👋 Hello {msg.from_user.mention},\n\nPlease join our channel to use this bot.",
-                reply_markup=InlineKeyboardMarkup(btns)
-            )
+            btn = await is_subscribedp(client, message, AUTH_CHANNEL)
+            if btn:
+                username = (await client.get_me()).username
+                if len(message.command) > 1:
+                    btn.append([InlineKeyboardButton("♻️ ʀᴇғʀᴇsʜ ♻️", url=f"https://t.me/{username}?start={message.command[1]}")])
+                else:
+                    btn.append([InlineKeyboardButton("♻️ ʀᴇғʀᴇsʜ ♻️", url=f"https://t.me/{username}?start=true")])
 
+                await message.reply_photo(
+                    photo="https://i.postimg.cc/xdkd1h4m/IMG-20250715-153124-952.jpg",  # Replace with your image link
+                    caption=(  
+                        f"<b>👋 Hello {message.from_user.mention},\n\n"  
+                        "ɪꜰ ʏᴏᴜ ᴡᴀɴᴛ ᴛᴏ ᴜꜱᴇ ᴍᴇ, ʏᴏᴜ ᴍᴜꜱᴛ ꜰɪʀꜱᴛ ᴊᴏɪɴ ᴏᴜʀ ᴜᴘᴅᴀᴛᴇꜱ ᴄʜᴀɴɴᴇʟ. "  
+                        "ᴄʟɪᴄᴋ ᴏɴ \"✇ ᴊᴏɪɴ ᴏᴜʀ ᴜᴘᴅᴀᴛᴇꜱ ᴄʜᴀɴɴᴇʟ ✇\" ʙᴜᴛᴛᴏɴ.ᴛʜᴇɴ ᴄʟɪᴄᴋ ᴏɴ ᴛʜᴇ \"ʀᴇǫᴜᴇꜱᴛ ᴛᴏ ᴊᴏɪɴ\" ʙᴜᴛᴛᴏɴ. "  
+                        "ᴀꜰᴛᴇʀ ᴊᴏɪɴɪɴɢ, ᴄʟɪᴄᴋ ᴏɴ \"ʀᴇғʀᴇsʜ\" ʙᴜᴛᴛᴏɴ.</b>"  
+                    ),  
+                    reply_markup=InlineKeyboardMarkup(btn)
+                )
+                return
         except Exception as e:
-            logger.error(f"Could not get invite link for AUTH_CHANNEL {AUTH_CHANNEL}: {e}")
-            error_buttons = [
-                [InlineKeyboardButton("✪ ꜱᴜᴘᴘᴏʀᴛ ɢʀᴏᴜᴘ ✪", url="https://t.me/Prime_Support_Group")]
-            ]
-            return await msg.reply_text(
-                "⚠️ **Oops! Something went wrong while creating the join link.**\n\n"
-                "Please wait a moment while we look into the issue. 🕒\n"
-                "You can also report this problem directly to our support team.\n\n"
-                "🔹 Once reported, our team will fix it as soon as possible.\n\n"
-                "Thank you for your patience 💖",
-                reply_markup=InlineKeyboardMarkup(error_buttons)
-            )
+            print(e)
 
     buttons = [
         [InlineKeyboardButton(" 🎬 ʜᴏᴡ ᴛᴏ ᴄʀᴇᴀᴛᴇ ᴀ ᴘᴏꜱᴛ", callback_data="create_post_help")],
@@ -856,6 +870,29 @@ async def post_to_channel_callback(bot, cq: CallbackQuery):
 # ---------------------------------------------------------------------------
 @app.on_message(filters.private & (filters.photo | filters.video) & ~filters.forwarded)
 async def direct_media_handler(bot, msg: Message):
+    if AUTH_CHANNEL:
+        try:
+            btn = await is_subscribed(client, message, AUTH_CHANNEL)
+            if btn:
+                username = (await client.get_me()).username
+                if len(message.command) > 1:
+                    btn.append([InlineKeyboardButton("♻️ ʀᴇғʀᴇsʜ ♻️", url=f"https://t.me/{username}?start={message.command[1]}")])
+                else:
+                    btn.append([InlineKeyboardButton("♻️ ʀᴇғʀᴇsʜ ♻️", url=f"https://t.me/{username}?start=true")])
+
+                await message.reply_photo(
+                    photo="https://i.postimg.cc/xdkd1h4m/IMG-20250715-153124-952.jpg",  # Replace with your image link
+                    caption=(  
+                        f"<b>👋 Hello {message.from_user.mention},\n\n"  
+                        "ɪꜰ ʏᴏᴜ ᴡᴀɴᴛ ᴛᴏ ᴜꜱᴇ ᴍᴇ, ʏᴏᴜ ᴍᴜꜱᴛ ꜰɪʀꜱᴛ ᴊᴏɪɴ ᴏᴜʀ ᴜᴘᴅᴀᴛᴇꜱ ᴄʜᴀɴɴᴇʟ. "  
+                        "ᴄʟɪᴄᴋ ᴏɴ \"✇ ᴊᴏɪɴ ᴏᴜʀ ᴜᴘᴅᴀᴛᴇꜱ ᴄʜᴀɴɴᴇʟ ✇\" ʙᴜᴛᴛᴏɴ.ᴛʜᴇɴ ᴄʟɪᴄᴋ ᴏɴ ᴛʜᴇ \"ʀᴇǫᴜᴇꜱᴛ ᴛᴏ ᴊᴏɪɴ\" ʙᴜᴛᴛᴏɴ. "  
+                        "ᴀꜰᴛᴇʀ ᴊᴏɪɴɪɴɢ, ᴄʟɪᴄᴋ ᴏɴ \"ʀᴇғʀᴇsʜ\" ʙᴜᴛᴛᴏɴ.</b>"  
+                    ),  
+                    reply_markup=InlineKeyboardMarkup(btn)
+                )
+                return
+        except Exception as e:
+            print(e)
     uid = msg.from_user.id
     convo = user_conversations.get(uid)
 
@@ -992,6 +1029,29 @@ async def direct_media_post_callback(bot, cq: CallbackQuery):
         
 @app.on_message(filters.private & filters.forwarded)
 async def forward_handler(bot, msg: Message):
+    if AUTH_CHANNEL:
+        try:
+            btn = await is_subscribed(client, message, AUTH_CHANNEL)
+            if btn:
+                username = (await client.get_me()).username
+                if len(message.command) > 1:
+                    btn.append([InlineKeyboardButton("♻️ ʀᴇғʀᴇsʜ ♻️", url=f"https://t.me/{username}?start={message.command[1]}")])
+                else:
+                    btn.append([InlineKeyboardButton("♻️ ʀᴇғʀᴇsʜ ♻️", url=f"https://t.me/{username}?start=true")])
+
+                await message.reply_photo(
+                    photo="https://i.postimg.cc/xdkd1h4m/IMG-20250715-153124-952.jpg",  # Replace with your image link
+                    caption=(  
+                        f"<b>👋 Hello {message.from_user.mention},\n\n"  
+                        "ɪꜰ ʏᴏᴜ ᴡᴀɴᴛ ᴛᴏ ᴜꜱᴇ ᴍᴇ, ʏᴏᴜ ᴍᴜꜱᴛ ꜰɪʀꜱᴛ ᴊᴏɪɴ ᴏᴜʀ ᴜᴘᴅᴀᴛᴇꜱ ᴄʜᴀɴɴᴇʟ. "  
+                        "ᴄʟɪᴄᴋ ᴏɴ \"✇ ᴊᴏɪɴ ᴏᴜʀ ᴜᴘᴅᴀᴛᴇꜱ ᴄʜᴀɴɴᴇʟ ✇\" ʙᴜᴛᴛᴏɴ.ᴛʜᴇɴ ᴄʟɪᴄᴋ ᴏɴ ᴛʜᴇ \"ʀᴇǫᴜᴇꜱᴛ ᴛᴏ ᴊᴏɪɴ\" ʙᴜᴛᴛᴏɴ. "  
+                        "ᴀꜰᴛᴇʀ ᴊᴏɪɴɪɴɢ, ᴄʟɪᴄᴋ ᴏɴ \"ʀᴇғʀᴇsʜ\" ʙᴜᴛᴛᴏɴ.</b>"  
+                    ),  
+                    reply_markup=InlineKeyboardMarkup(btn)
+                )
+                return
+        except Exception as e:
+            print(e)
     if not msg.forward_from_chat or msg.forward_from_chat.type != enums.ChatType.CHANNEL:
         return
     
@@ -1331,6 +1391,29 @@ async def refresh_callback(bot, cq: CallbackQuery):
 
 @app.on_message(filters.private & filters.command(["addchannel", "mychannels", "delchannel"]))
 async def channel_management(bot: Client, msg: Message):
+    if AUTH_CHANNEL:
+        try:
+            btn = await is_subscribed(client, message, AUTH_CHANNEL)
+            if btn:
+                username = (await client.get_me()).username
+                if len(message.command) > 1:
+                    btn.append([InlineKeyboardButton("♻️ ʀᴇғʀᴇsʜ ♻️", url=f"https://t.me/{username}?start={message.command[1]}")])
+                else:
+                    btn.append([InlineKeyboardButton("♻️ ʀᴇғʀᴇsʜ ♻️", url=f"https://t.me/{username}?start=true")])
+
+                await message.reply_photo(
+                    photo="https://i.postimg.cc/xdkd1h4m/IMG-20250715-153124-952.jpg",  # Replace with your image link
+                    caption=(  
+                        f"<b>👋 Hello {message.from_user.mention},\n\n"  
+                        "ɪꜰ ʏᴏᴜ ᴡᴀɴᴛ ᴛᴏ ᴜꜱᴇ ᴍᴇ, ʏᴏᴜ ᴍᴜꜱᴛ ꜰɪʀꜱᴛ ᴊᴏɪɴ ᴏᴜʀ ᴜᴘᴅᴀᴛᴇꜱ ᴄʜᴀɴɴᴇʟ. "  
+                        "ᴄʟɪᴄᴋ ᴏɴ \"✇ ᴊᴏɪɴ ᴏᴜʀ ᴜᴘᴅᴀᴛᴇꜱ ᴄʜᴀɴɴᴇʟ ✇\" ʙᴜᴛᴛᴏɴ.ᴛʜᴇɴ ᴄʟɪᴄᴋ ᴏɴ ᴛʜᴇ \"ʀᴇǫᴜᴇꜱᴛ ᴛᴏ ᴊᴏɪɴ\" ʙᴜᴛᴛᴏɴ. "  
+                        "ᴀꜰᴛᴇʀ ᴊᴏɪɴɪɴɢ, ᴄʟɪᴄᴋ ᴏɴ \"ʀᴇғʀᴇsʜ\" ʙᴜᴛᴛᴏɴ.</b>"  
+                    ),  
+                    reply_markup=InlineKeyboardMarkup(btn)
+                )
+                return
+        except Exception as e:
+            print(e)
     command, user_id = msg.command[0].lower(), msg.from_user.id
     if command == "addchannel":
         if len(msg.command) < 2: return await msg.reply_text("⚠️ **Usage:** `/addchannel [Channel ID]`")
