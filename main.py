@@ -1267,9 +1267,37 @@ async def about_bot_handler(bot: Client, cq: CallbackQuery):
         parse_mode=enums.ParseMode.HTML,
         disable_web_page_preview=True,
         reply_markup=InlineKeyboardMarkup([
-            [InlineKeyboardButton("✪ ꜱᴜᴘᴘᴏʀᴛ ɢʀᴏᴜᴘ ✪", url="https://t.me/Prime_Support_Group")],
+            [InlineKeyboardButton("🧑‍💻 ꜱᴏᴜʀᴄᴇ ᴄoᴅᴇ 🧑‍💻", callback_data="source_code")],
             [InlineKeyboardButton("⌫ Back", callback_data="start_menu")]
         ])
+    )
+
+# ===================================================================
+# 🔹 Source Code Handler (New Separate Function)
+# ===================================================================
+@app.on_callback_query(filters.regex("^source_code$"))
+async def source_code_handler(bot: Client, cq: CallbackQuery):
+    await cq.answer()
+    await cq.message.delete() # Deletes the previous message (the start menu)
+
+    # Define the buttons for the source code message
+    source_buttons = [
+        [InlineKeyboardButton("♚ ᴀᴅᴍɪɴ ♚", url="https://t.me/Prime_Admin_Support_ProBot")],
+        [InlineKeyboardButton("• ⌫ Back •", callback_data="start_menu")]
+    ]
+
+    await bot.send_photo(
+        chat_id=cq.message.chat.id,
+        photo="https://i.postimg.cc/hvFZ93Ct/file-000000004188623081269b2440872960.png",
+        caption=(
+            "👋 Hello Dear 👋,\n\n"
+            "⚠️ ᴛʜɪꜱ ʙᴏᴛ ɪꜱ ᴀ ᴘʀɪᴠᴀᴛᴇ ꜱᴏᴜʀᴄᴇ ᴘʀᴏᴊᴇᴄᴛ\n\n"
+            "ᴛʜɪs ʙᴏᴛ ʜᴀs ʟᴀsᴛᴇsᴛ ᴀɴᴅ ᴀᴅᴠᴀɴᴄᴇᴅ ꜰᴇᴀᴛᴜʀᴇs⚡️\n"
+            "▸ ɪꜰ ʏᴏᴜ ᴡᴀɴᴛ ꜱᴏᴜʀᴄᴇ ᴄoᴅᴇ oʀ ʟɪᴋᴇ ᴛʜɪꜱ ʙᴏᴛ ᴄᴏɴᴛᴀᴄᴛ ᴍᴇ..!\n"
+            "▸ ɪ ᴡɪʟʟ ᴄʀᴇᴀᴛᴇ ᴀ ʙᴏᴛ ꜰᴏʀ ʏᴏᴜ oʀ ꜱᴏᴜʀᴄᴇ ᴄoᴅᴇ\n"
+            "⇒ ᴄᴏɴᴛᴀᴄᴛ ᴍᴇ - ♚ ᴀᴅᴍɪɴ ♚."
+        ),
+        reply_markup=InlineKeyboardMarkup(source_buttons)
     )
     
 @app.on_callback_query(filters.regex("refresh_check"))
