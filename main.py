@@ -446,25 +446,33 @@ async def post_creation_entry(bot, msg: Message):
 
     convo = user_conversations.get(uid)
 
-    # --- New gatekeeper logic starts ---
+    # --- New, more robust gatekeeper logic ---
     if convo:
-        # If the user is in a state that requires input (like a link or season number), let conversation_handler manage it.
-        if convo.get("state") and convo["state"] not in ["awaiting_forward_for_post", "generating_post"]:
+        # These are the states where the bot is actively waiting for a specific text input.
+        active_input_states = [
+            "wait_lang", "wait_480p", "wait_720p", "wait_1080p", 
+            "wait_season_number", "ask_episode_or_done", 
+            "wait_season_link", "wait_episode_link"
+        ]
+        
+        # If the user is in one of the active input states, let the conversation_handler manage the text.
+        if convo.get("state") in active_input_states:
             return await conversation_handler(bot, msg)
         
-        # If a post preview is already shown to the user (i.e., there is an unfinished task).
+        # For any other situation where a `convo` exists (e.g., a preview is shown, or it's awaiting a forward),
+        # it's considered an unfinished task. Block the new request.
         else:
             await msg.reply_text(
                 "⚠️ **You have an unfinished task!**\n\n"
-                "You have already created a post that has not yet been sent to a channel. Please complete the previous task or cancel it using the button below.",
+                "You have a pending post that has not been completed. Please post it to a channel or cancel it using the button below before starting a new one.",
                 reply_markup=InlineKeyboardMarkup(
                     [[InlineKeyboardButton("❌ Cancel Previous Task", callback_data="cancel_process")]]
                 )
             )
-            return # Stop the new post creation process here.
-    # --- New gatekeeper logic ends ---
+            return
+    # --- End of new gatekeeper logic ---
     
-    # If there are no unfinished tasks, the new post creation process will continue normally.
+    # If no conversation exists, proceed with the new search as normal.
     processing_msg = await msg.reply_text(f"🔍 Searching for `{query}`...")
     
     loop = asyncio.get_running_loop()
@@ -488,7 +496,7 @@ async def post_creation_entry(bot, msg: Message):
         await processing_msg.edit_text(
             "❌ **No exact match found. Did you mean one of these?**",
             reply_markup=InlineKeyboardMarkup(buttons)
-    )
+        )
 
 @app.on_callback_query(filters.regex("^select_post_"))
 async def select_post_callback(bot, cq: CallbackQuery):
@@ -849,11 +857,23 @@ async def post_to_channel_callback(bot, cq: CallbackQuery):
 @app.on_message(filters.private & (filters.photo | filters.video) & ~filters.forwarded)
 async def direct_media_handler(bot, msg: Message):
     uid = msg.from_user.id
-    if uid in user_conversations and user_conversations[uid].get('state') not in [None, "awaiting_forward_for_post"]:
-        return
+    convo = user_conversations.get(uid)
 
-    # --- অ্যানিমেশনসহ নতুন পরিবর্তন ---
-    status_msg = await msg.reply_text("⏳ Please wait...")
+    # --- New, more robust gatekeeper logic ---
+    # If a user has ANY active conversation or unfinished task, block the new media submission.
+    if convo:
+        await msg.reply_text(
+            "⚠️ **You have an unfinished task!**\n\n"
+            "You have a pending post that has not been completed. Please post it to a channel or cancel it using the button below before starting a new one.",
+            reply_markup=InlineKeyboardMarkup(
+                [[InlineKeyboardButton("❌ Cancel Previous Task", callback_data="cancel_process")]]
+            )
+        )
+        return
+    # --- End of new gatekeeper logic ---
+
+    # If no conversation exists, proceed with handling the direct media.
+    status_msg = await msg.reply_text("⏳ Please wait, checking your channels...")
     stop_event = asyncio.Event()
     animation_task = asyncio.create_task(loading_animation(status_msg, stop_event))
 
@@ -866,7 +886,6 @@ async def direct_media_handler(bot, msg: Message):
                 if await ensure_bot_admin_rights(bot, ch['id']):
                     buttons.append([InlineKeyboardButton(ch["title"], callback_data=f"sendto_{msg.id}_{ch['id']}")])
 
-        # --- মূল কাজ শেষ, এখন অ্যানিমেশন বন্ধ করা হবে ---
         stop_event.set()
         await animation_task
         
