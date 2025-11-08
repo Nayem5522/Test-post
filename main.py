@@ -50,7 +50,7 @@ MONGO_URL = os.environ.get("MONGO_URL", "your_mongodb_url")
 TMDB_API_KEY = os.environ.get("TMDB_API_KEY", "your_tmdb_api_key")
 
 # --- Channel & Owner Information ---
-AUTH_CHANNEL = [int(ch) if id_pattern.search(ch) else ch for ch in environ.get('AUTH_CHANNEL', '').split()] 
+AUTH_CHANNEL = [int(ch) if id_pattern.search(ch) else ch for ch in environ.get('AUTH_CHANNEL', '-1002245813234').split()] 
 # give channel id with separate space. Ex: ('-10073828 -102782829 -1007282828')
 
 OWNER_ID = int(os.environ.get("OWNER_ID", "5926160191"))
