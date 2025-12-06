@@ -94,23 +94,22 @@ async def loading_animation(message: Message, stop_event: asyncio.Event):
     """
     Edits a message repeatedly to show a large clock animation until the stop_event is set.
     """
-    # এই ঘড়ির ইমোগুলো একটি চমৎকার ঘুরন্ত অ্যানিমেশন তৈরি করে
+    
     animation_frames = ["🕐", "🕑", "🕒", "🕓", "🕔", "🕕", "🕖", "🕗", "🕘", "🕙", "🕚", "🕛"]
     idx = 0
     text = "⏳ Please wait, checking your channels..."
     
     while not stop_event.is_set():
         try:
-            # অ্যানিমেশন ফ্রেমটি বড় করে দেখানোর জন্য এটিকে আলাদা লাইনে রাখা হয়েছে
-            # এবং টেক্সটটি দুটি নতুন লাইনের পর শুরু হয়েছে
+            
             display_text = f"{animation_frames[idx]}\n\n{text}"
             
             await message.edit_text(display_text)
             idx = (idx + 1) % len(animation_frames)
-            await asyncio.sleep(0.3)  # অ্যানিমেশনটি আরেকটু ধীর এবং মসৃণ করার জন্য সময় বাড়ানো হলো
+            await asyncio.sleep(0.3)  
             
         except Exception:
-            # যদি মেসেজ এডিট করতে কোনো সমস্যা হয়, লুপ বন্ধ হয়ে যাবে
+            
             break
 
 
@@ -696,7 +695,7 @@ async def generate_final_post_preview(bot, uid, chat_id, status_msg: Message):
         reply_markup=InlineKeyboardMarkup(inline_keyboard)
     )
     
-    # --- অ্যানিমেশনসহ নতুন পরিবর্তন ---
+    
     channel_status_msg = await preview_msg.reply_text("⏳ Please wait...")
     stop_event = asyncio.Event()
     animation_task = asyncio.create_task(loading_animation(channel_status_msg, stop_event))
@@ -708,7 +707,7 @@ async def generate_final_post_preview(bot, uid, chat_id, status_msg: Message):
                 if await ensure_bot_admin_rights(bot, ch['id']):
                     saved_channels.append(ch)
         
-        # --- মূল কাজ শেষ, এখন অ্যানিমেশন বন্ধ করা হবে ---
+        
         stop_event.set()
         await animation_task
 
@@ -1019,14 +1018,14 @@ async def post_direct_media_to_channel(bot: Client, user_id: int, channel_id: in
             await status_message.edit_text("❌ **Caption Too Long!** Limit is 1024 characters.")
             return
 
-        # বাটন প্রস্তুত করা হচ্ছে
+        
         all_buttons = [
             [InlineKeyboardButton("👍 0", callback_data="react_DUMMY_like"), InlineKeyboardButton("❤️ 0", callback_data="react_DUMMY_love")]
         ]
         for btn in user_data.get("custom_buttons", []):
             all_buttons.append([InlineKeyboardButton(btn["text"], url=btn["url"])])
         
-        # মিডিয়া কপি করে চ্যানেলে পোস্ট করা হচ্ছে
+        
         copied_msg = await media_msg.copy(chat_id=channel_id, caption=final_caption)
         await reactions_collection.insert_one({"message_id": copied_msg.id, "chat_id": channel_id, "reactions": {"like": [], "love": []}})
         
@@ -1044,22 +1043,20 @@ async def post_direct_media_to_channel(bot: Client, user_id: int, channel_id: in
 
 @app.on_callback_query(filters.regex("^sendto_"))
 async def direct_media_post_callback(bot, cq: CallbackQuery):
-    # ব্যবহারকারীকে জানানো হচ্ছে যে পোস্ট করার প্রক্রিয়া শুরু হয়েছে
+    
     await cq.answer("✅ Posting...", show_alert=False)
     
     try:
-        # কলব্যাক ডেটা থেকে মেসেজ আইডি এবং চ্যানেল আইডি নেওয়া হচ্ছে
+        
         _, msg_id, channel_id = cq.data.split("_")
         msg_id, channel_id = int(msg_id), int(channel_id)
         user_id = cq.from_user.id
 
-        # এখন শুধুমাত্র 'post_direct_media_to_channel' ফাংশনটি কল করা হবে।
-        # মিডিয়া পোস্ট করার সমস্ত লজিক এই একটি ফাংশনেই রয়েছে।
-        # এটি অ্যাডমিন রাইটস চেক করা থেকে শুরু করে পোস্ট করা এবং স্ট্যাটাস মেসেজ এডিট করা পর্যন্ত সব কাজ করবে।
+        
         await post_direct_media_to_channel(bot, user_id, channel_id, msg_id, cq.message)
 
     except Exception as e:
-        # যদি কোনো কারণে পুরো প্রক্রিয়াতে সমস্যা হয়, তাহলে সেটি লগ করা হবে এবং ব্যবহারকারীকে জানানো হবে।
+        
         logger.error(f"Error in direct media callback: {e}")
         await cq.message.edit_text(f"❌ An unexpected error occurred: {e}")
         
@@ -1103,16 +1100,16 @@ async def forward_handler(bot, msg: Message):
     status_msg = await msg.reply_text(f"⏳ Processing channel **{channel.title}**...")
 
     try:
-        # প্রথমে চ্যানেলটি সেভ করার চেষ্টা করা হবে
+        
         saved, status_text = await save_channel(uid, channel.id, channel.title)
 
-        # বিভিন্ন অবস্থা পরীক্ষা করা হচ্ছে
+        
         if convo and convo.get('state') == 'awaiting_forward_for_post':
-            # এপিআই থেকে তৈরি করা পোস্টের জন্য
+            
             await post_to_channel(bot, uid, channel.id, status_msg)
         
         elif convo and convo.get('state') == 'awaiting_forward_for_direct_media':
-            # ডাইরেক্ট মিডিয়া পোস্টের জন্য নতুন লজিক
+            
             media_msg_id = convo.get("media_message_id")
             if media_msg_id:
                 await post_direct_media_to_channel(bot, uid, channel.id, media_msg_id, status_msg)
@@ -1120,16 +1117,16 @@ async def forward_handler(bot, msg: Message):
                 await status_msg.edit_text("❌ Error: Could not find the original media to post.")
         
         else:
-            # যদি কোনো বিশেষ অবস্থা না থাকে, তাহলে শুধু চ্যানেল সেভের বার্তা দেখানো হবে
+            
             await status_msg.edit_text(f"✅ {status_text}" if saved else f"⚠️ {status_text}")
             
-    except ValueError as e: # যদি বট অ্যাডমিন না থাকে
+    except ValueError as e: 
         await status_msg.edit_text(f"❌ **Could not add channel '{channel.title}'.**\n\n**Reason:** `{e}`\n\nPlease ensure I am an administrator in the channel and have the 'Post Messages' permission, then forward a message again.")
     except Exception as e:
         logger.error(f"Error saving forwarded channel {channel.id} for user {uid}: {e}")
         await status_msg.edit_text(f"❌ An unexpected error occurred while processing the channel. Error: {e}")
     finally:
-        # পোস্ট করার পর কনভারসেশন স্টেট মুছে ফেলা হচ্ছে
+        
         if convo and convo.get('state') == 'awaiting_forward_for_direct_media':
              if uid in user_conversations:
                 del user_conversations[uid]
@@ -1386,38 +1383,11 @@ async def about_bot_handler(bot: Client, cq: CallbackQuery):
         parse_mode=enums.ParseMode.HTML,
         disable_web_page_preview=True,
         reply_markup=InlineKeyboardMarkup([
-            [InlineKeyboardButton("🧑‍💻 ꜱᴏᴜʀᴄᴇ ᴄoᴅᴇ 🧑‍💻", callback_data="source_code")],
             [InlineKeyboardButton("⌫ Back", callback_data="start_menu")]
         ])
     )
 
-# ===================================================================
-# 🔹 Source Code Handler (New Separate Function)
-# ===================================================================
-@app.on_callback_query(filters.regex("^source_code$"))
-async def source_code_handler(bot: Client, cq: CallbackQuery):
-    await cq.answer()
-    await cq.message.delete() # Deletes the previous message (the start menu)
 
-    # Define the buttons for the source code message
-    source_buttons = [
-        [InlineKeyboardButton("♚ ᴀᴅᴍɪɴ ♚", url="https://t.me/Prime_Admin_Support_ProBot")],
-        [InlineKeyboardButton("• ⌫ Back •", callback_data="start_menu")]
-    ]
-
-    await bot.send_photo(
-        chat_id=cq.message.chat.id,
-        photo="https://i.postimg.cc/hvFZ93Ct/file-000000004188623081269b2440872960.png",
-        caption=(
-            "👋 Hello Dear 👋,\n\n"
-            "⚠️ ᴛʜɪꜱ ʙᴏᴛ ɪꜱ ᴀ ᴘʀɪᴠᴀᴛᴇ ꜱᴏᴜʀᴄᴇ ᴘʀᴏᴊᴇᴄᴛ\n\n"
-            "ᴛʜɪs ʙᴏᴛ ʜᴀs ʟᴀsᴛᴇsᴛ ᴀɴᴅ ᴀᴅᴠᴀɴᴄᴇᴅ ꜰᴇᴀᴛᴜʀᴇs⚡️\n"
-            "▸ ɪꜰ ʏᴏᴜ ᴡᴀɴᴛ ꜱᴏᴜʀᴄᴇ ᴄoᴅᴇ oʀ ʟɪᴋᴇ ᴛʜɪꜱ ʙᴏᴛ ᴄᴏɴᴛᴀᴄᴛ ᴍᴇ..!\n"
-            "▸ ɪ ᴡɪʟʟ ᴄʀᴇᴀᴛᴇ ᴀ ʙᴏᴛ ꜰᴏʀ ʏᴏᴜ oʀ ꜱᴏᴜʀᴄᴇ ᴄoᴅᴇ\n"
-            "⇒ ᴄᴏɴᴛᴀᴄᴛ ᴍᴇ - ♚ ᴀᴅᴍɪɴ ♚."
-        ),
-        reply_markup=InlineKeyboardMarkup(source_buttons)
-    )
     
 @app.on_callback_query(filters.regex("refresh_check"))
 async def refresh_callback(bot, cq: CallbackQuery):
